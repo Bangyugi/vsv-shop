@@ -1,13 +1,28 @@
 package com.bangvan;
 
+import jakarta.annotation.PostConstruct;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.util.TimeZone;
+
+@Slf4j
 @SpringBootApplication
 public class VsvShopApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(VsvShopApplication.class, args);
-	}
+    @Value("${environment.info}")
+    private String environmentInfo;
+
+    public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        SpringApplication.run(VsvShopApplication.class, args);
+    }
+    @PostConstruct
+    public void printEnvironmentInfo() {
+        log.info("environmentInfo: " + environmentInfo);
+    }
 
 }
