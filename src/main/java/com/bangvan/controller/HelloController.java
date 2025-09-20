@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/hello")
-@Tag(name = "Hello", description = "Hello")
+@Tag(name = "Hello Bang", description = "Hello BangTran dep trai")
 public class HelloController {
     @Operation(summary = "Hello world",description = "Hello world")
     @GetMapping()
