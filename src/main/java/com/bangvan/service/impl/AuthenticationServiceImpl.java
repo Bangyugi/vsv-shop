@@ -1,0 +1,132 @@
+package com.bangvan.service.impl;
+
+import com.bangvan.dto.request.auth.LoginRequest;
+import com.bangvan.dto.request.auth.RegisterRequest;
+import com.bangvan.dto.response.TokenResponse;
+
+import com.bangvan.dto.response.user.UserResponse;
+import com.bangvan.entity.*;
+import com.bangvan.exception.AppException;
+import com.bangvan.exception.ErrorCode;
+
+import com.bangvan.repository.RoleRepository;
+import com.bangvan.repository.UserRepository;
+import com.bangvan.service.AuthenticationService;
+import com.bangvan.service.JwtService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.util.Set;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class AuthenticationServiceImpl implements AuthenticationService {
+    private final UserRepository userRepository;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final ModelMapper modelMapper;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+
+
+    private void authenticateUser(LoginRequest loginRequest) {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+            );
+        } catch (Exception exception) {
+            throw new AppException(ErrorCode.USER_UNAUTHENTICATED);
+        }
+    }
+
+
+
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public TokenResponse login(LoginRequest loginRequest) {
+        User user = userRepository.findByUsername(loginRequest.getUsername())
+                .orElseThrow(() -> new AppException(ErrorCode.ACCESS_DENIED));
+
+        if (!user.isEnabled()) {
+            throw new AppException(ErrorCode.USER_NOT_VERIFIED);
+        }
+
+        // Xác thực username và password
+        authenticateUser(loginRequest);
+
+
+        String jwtToken = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+
+        long now = System.currentTimeMillis();
+
+        return TokenResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .expiredTime(new Timestamp(now + jwtService.getExpirationTime()))
+                .build();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public UserResponse register(RegisterRequest request){
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
+        if (userRepository.existsByPhone(request.getPhone())){
+            throw new AppException(ErrorCode.PHONE_EXISTED);
+        }
+
+        if (userRepository.existsByUsername(request.getUsername())){
+            throw new AppException(ErrorCode.USERNAME_EXISTED);
+        }
+
+
+        User user = modelMapper.map(request, User.class);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRoles(Set.of(roleRepository.findByName("ROLE_USER")
+                .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND))));
+
+
+
+
+
+        log.info("Saving user to database");
+        user= userRepository.save(user);
+        return modelMapper.map(user, UserResponse.class);
+    }
+
+    @Override
+    public TokenResponse refreshToken(String refreshToken) {
+        if (jwtService.isTokenExpired(refreshToken)) {
+            throw new AppException(ErrorCode.TOKEN_EXPIRED);
+        }
+        String username = jwtService.extractUsername(refreshToken);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        String newAccessToken = jwtService.generateToken(user);
+        String newRefreshToken = jwtService.generateRefreshToken(user);
+
+
+        long now = System.currentTimeMillis();
+        return TokenResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .expiredTime(new Timestamp(now + jwtService.getExpirationTime()))
+                .build();
+    }
+
+
+}
