@@ -4,28 +4,25 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.Set;
-
 @Entity
-@Table(name = "roles")
+@Table(name = "verification_codes")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-
-public class Role {
+public class VerificationCode {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
     Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
-    String name;
+    String otp;
 
-    @Column(name = "description")
-    String description;
+    String email;
 
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    User user;
 
 }

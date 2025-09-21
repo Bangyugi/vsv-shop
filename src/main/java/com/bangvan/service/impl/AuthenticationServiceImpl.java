@@ -1,8 +1,9 @@
 package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.auth.LoginRequest;
+import com.bangvan.dto.request.auth.RefreshTokenRequest;
 import com.bangvan.dto.request.auth.RegisterRequest;
-import com.bangvan.dto.response.TokenResponse;
+import com.bangvan.dto.response.auth.TokenResponse;
 
 import com.bangvan.dto.response.user.UserResponse;
 import com.bangvan.entity.*;
@@ -109,11 +110,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public TokenResponse refreshToken(String refreshToken) {
-        if (jwtService.isTokenExpired(refreshToken)) {
+    public TokenResponse refreshToken(RefreshTokenRequest refreshToken) {
+        if (jwtService.isTokenExpired(refreshToken.getRefreshToken())) {
             throw new AppException(ErrorCode.TOKEN_EXPIRED);
         }
-        String username = jwtService.extractUsername(refreshToken);
+        String username = jwtService.extractUsername(refreshToken.getRefreshToken());
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         String newAccessToken = jwtService.generateToken(user);

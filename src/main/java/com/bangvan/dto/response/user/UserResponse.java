@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.Set;
 
 @Getter
@@ -14,7 +15,7 @@ import java.util.Set;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
 public class UserResponse  {
-    Long userId;
+    Long id;
     String username;
     String email;
     String phone;
@@ -22,6 +23,7 @@ public class UserResponse  {
     String lastName;
     String avatar;
     Gender gender;
+    LocalDate birthDate;
     Boolean enabled;
     Set<Role> roles;
 }

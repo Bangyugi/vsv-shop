@@ -4,28 +4,23 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.Set;
-
 @Entity
-@Table(name = "roles")
+@Table(name = "deals")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-
-public class Role {
+public class Deal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
-    Long id;
+    private Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
-    String name;
+    private Integer discount;
 
-    @Column(name = "description")
-    String description;
-
+    @OneToOne
+    @JoinColumn(name = "home_category_id")
+    private HomeCategory category;
 
 }

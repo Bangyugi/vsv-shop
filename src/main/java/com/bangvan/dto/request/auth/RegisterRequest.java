@@ -37,21 +37,9 @@ public class RegisterRequest {
     private String lastName;
 
     @NotBlank
-    private String birthDate;
+    private LocalDate birthDate;
 
-    private String avatar = "https://cdn-icons-png.flaticon.com/512/3607/3607444.png";
 
     private Gender gender;
 
-    // Trường này dùng để phân biệt loại user (STUDENT, ADVISOR)
-    @NotBlank
-    private String userType;
-
-    // Các trường bổ sung dành riêng cho Student
-    private String majorName;
-    private LocalDate graduationTime;
-
-    // Các trường bổ sung dành riêng cho Advisor
-    private String facultyName;
-    private String academicDegree;
 }

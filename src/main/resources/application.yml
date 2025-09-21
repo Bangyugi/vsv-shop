@@ -6,6 +6,9 @@ spring:
     name: vsv-shop
   profiles:
     active: @spring.profiles.active@
+  devtools:
+    restart:
+      enabled: false
 
 management:
   endpoints:
