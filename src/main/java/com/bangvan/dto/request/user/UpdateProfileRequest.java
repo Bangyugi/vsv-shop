@@ -39,7 +39,7 @@ public class UpdateProfileRequest {
 
     private Gender gender;
 
-    @NotNull
+
     private Boolean enabled;
 
 

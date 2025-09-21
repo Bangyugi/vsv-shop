@@ -1,31 +1,29 @@
 package com.bangvan.entity;
 
+import com.bangvan.utils.HomeCategorySection;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.Set;
-
 @Entity
-@Table(name = "roles")
+@Table(name = "home_categories")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-
-public class Role {
+public class HomeCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
     Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
     String name;
 
-    @Column(name = "description")
-    String description;
+    String image;
 
+    String categoryId;
+
+    HomeCategorySection section;
 
 }

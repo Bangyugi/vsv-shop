@@ -1,4 +1,4 @@
-package com.bangvan.dto.response;
+package com.bangvan.dto.response.auth;
 
 
 import lombok.*;

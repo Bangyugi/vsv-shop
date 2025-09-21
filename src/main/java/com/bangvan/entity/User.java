@@ -1,7 +1,9 @@
 package com.bangvan.entity;
 
+import com.bangvan.utils.AccountStatus;
 import com.bangvan.utils.Gender;
 import com.bangvan.utils.Status;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,10 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.io.Serial;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(name="users")
@@ -25,12 +24,11 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-
+@Inheritance(strategy = InheritanceType.JOINED)
 public class User extends  AbstractEntity implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name="user_id")
-    Long userId;
+    Long id;
 
     @Column(name="username",unique = true,nullable = false)
     String username;
@@ -52,7 +50,6 @@ public class User extends  AbstractEntity implements UserDetails {
     String lastName;
 
 
-
     @Column(name = "avatar")
     String avatar = "https://cdn-icons-png.flaticon.com/512/3607/3607444.png";
 
@@ -61,15 +58,14 @@ public class User extends  AbstractEntity implements UserDetails {
     Gender gender;
 
     @Column(name = "enabled")
-    Boolean enabled = false;
+    Boolean enabled = true;
 
     @Column(name="birth_date")
     LocalDate birthDate ;
 
-
     @Enumerated(EnumType.STRING)
-    @Column(name="status")
-    Status status;
+    @Column(name="account_status")
+    AccountStatus accountStatus;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -79,6 +75,20 @@ public class User extends  AbstractEntity implements UserDetails {
     )
     private Set<Role> roles;
 
+    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL,orphanRemoval = true)
+    Set<Address> addresses = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_coupon",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "coupon_id")
+    )
+    @JsonIgnore
+    Set<Coupon> usedCoupons = new HashSet<>();
+
+    @OneToOne(mappedBy = "user",cascade = CascadeType.ALL, orphanRemoval = true)
+    Cart cart;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

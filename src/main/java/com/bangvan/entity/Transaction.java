@@ -3,29 +3,25 @@ package com.bangvan.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.util.Set;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "roles")
+@Table(name = "transactions")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-
-public class Role {
+public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
     Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
-    String name;
+    @OneToOne
+    @JoinColumn(name = "order_id")
+    private Order order;
 
-    @Column(name = "description")
-    String description;
-
+    private LocalDateTime date = LocalDateTime.now();
 
 }

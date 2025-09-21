@@ -1,6 +1,7 @@
 package com.bangvan.controller;
 
 import com.bangvan.dto.request.auth.LoginRequest;
+import com.bangvan.dto.request.auth.RefreshTokenRequest;
 import com.bangvan.dto.request.auth.RegisterRequest;
 import com.bangvan.dto.response.ApiResponse;
 import com.bangvan.service.AuthenticationService;
@@ -42,7 +43,7 @@ public class AuthenticationController {
 
     @Operation(summary = "Refresh Token", description = "Refresh Token API")
     @PostMapping(value = "/refreshtoken")
-    public ResponseEntity<ApiResponse> refreshToken (@RequestBody String refreshToken){
+    public ResponseEntity<ApiResponse> refreshToken (@RequestBody RefreshTokenRequest refreshToken){
         ApiResponse authentication =  ApiResponse.success(200, "User logged in successfully", authenticationService.refreshToken(refreshToken));
 
         return new ResponseEntity<>(authentication, HttpStatus.OK);

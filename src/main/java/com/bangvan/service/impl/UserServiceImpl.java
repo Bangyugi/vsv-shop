@@ -71,16 +71,15 @@ public class UserServiceImpl implements UserService {
 
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
 
-        if (userRepository.existsByEmailAndUserIdNot(request.getEmail(), userId)) {
+        if (userRepository.existsByEmailAndIdNot(request.getEmail(), userId)) {
             throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
-        if (userRepository.existsByPhoneAndUserIdNot(request.getPhone(), userId)) {
+        if (userRepository.existsByPhoneAndIdNot(request.getPhone(), userId)) {
             throw new AppException(ErrorCode.PHONE_EXISTED);
         }
 
 
-        modelMapper.map(request, User.class);
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        modelMapper.map(request, user);
 
         log.info("Updating user to database");
         user= userRepository.save(user);
@@ -90,7 +89,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public String deleteUser(Long userId){
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
-
         userRepository.delete(user);
         return "user with "+ userId +" was deleted successfully";
     }
