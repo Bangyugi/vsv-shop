@@ -10,6 +10,7 @@ import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
+import com.bangvan.repository.CartRepository;
 import com.bangvan.repository.RoleRepository;
 import com.bangvan.repository.UserRepository;
 import com.bangvan.service.UserService;
@@ -34,8 +35,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-
-
+    private final CartRepository cartRepository;
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -58,6 +58,11 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRoles(Set.of(roleRepository.findByName(request.getRoleName())
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND))));
+
+        Cart cart = new Cart();
+        cart.setUser(user);
+        cartRepository.save(cart);
+
 
         log.info("Saving user to database");
         user= userRepository.save(user);

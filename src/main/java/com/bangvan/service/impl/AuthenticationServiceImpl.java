@@ -10,6 +10,7 @@ import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
 
+import com.bangvan.repository.CartRepository;
 import com.bangvan.repository.RoleRepository;
 import com.bangvan.repository.UserRepository;
 import com.bangvan.service.AuthenticationService;
@@ -36,6 +37,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CartRepository cartRepository;
 
 
     private void authenticateUser(LoginRequest loginRequest) {
@@ -100,7 +102,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.setRoles(Set.of(roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND))));
 
-
+        Cart cart = new Cart();
+        cart.setUser(user);
+        cartRepository.save(cart);
 
 
 
