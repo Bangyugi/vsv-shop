@@ -58,14 +58,14 @@ public class User extends  AbstractEntity implements UserDetails {
     Gender gender;
 
     @Column(name = "enabled")
-    Boolean enabled = false;
+    Boolean enabled = true;
 
     @Column(name="birth_date")
     LocalDate birthDate ;
 
     @Enumerated(EnumType.STRING)
     @Column(name="account_status")
-    AccountStatus accountStatus;
+    AccountStatus accountStatus = AccountStatus.ACTIVE;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -89,6 +89,8 @@ public class User extends  AbstractEntity implements UserDetails {
 
     @OneToOne(mappedBy = "user",cascade = CascadeType.ALL, orphanRemoval = true)
     Cart cart;
+
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
