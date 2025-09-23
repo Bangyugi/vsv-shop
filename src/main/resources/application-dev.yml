@@ -21,11 +21,17 @@ spring:
   sql:
     init:
       mode: always
-#  mail:
-#    host: smtp.gmail.com
-#    port: 587
-#    username: bangtranvan08@gmail.com
-#    password: inztsmgbywgzmevn
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: bangtranvan08@gmail.com
+    password: lpttjytcptdvbocx
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 
 environment:

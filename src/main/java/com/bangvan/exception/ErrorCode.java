@@ -40,7 +40,11 @@ public enum ErrorCode {
 
     PROJECT_NOT_FOUND(404, "Project not found", HttpStatus.NOT_FOUND),
     EMAIL_REPEATED(1022,"You entered the same email",HttpStatus.BAD_REQUEST ),
-    PHONE_REPEATED(1023,"You entered the same phone number",HttpStatus.BAD_REQUEST );
+    PHONE_REPEATED(1023,"You entered the same phone number",HttpStatus.BAD_REQUEST ),
+    EMAIL_SEND_FAILED(1024,"Failed to send email",HttpStatus.BAD_REQUEST ),
+    INVALID_OTP(1025,"Invalid OTP",HttpStatus.BAD_REQUEST ),
+    EXPIRED_OTP(1026,"Expired OTP",HttpStatus.BAD_REQUEST ),
+    EMAIL_REQUEST_FAILED(1027,"Failed to send email",HttpStatus.BAD_REQUEST );
 
 
     ErrorCode(int code, String message, HttpStatus status) {

@@ -1,6 +1,8 @@
 package com.bangvan.repository;
 
 import com.bangvan.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -20,4 +22,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailAndIdNot(String email, Long userId);
 
     boolean existsByPhoneAndIdNot(String phone, Long userId);
+
+    Optional<User> findByIdAndEnabledIsTrue(Long userId);
+
+    Optional<User> findByUsernameAndEnabledIsTrue(String name);
+
+    Page<User> findByEnabledIsTrue(Pageable pageable);
 }

@@ -58,6 +58,8 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRoles(Set.of(roleRepository.findByName(request.getRoleName())
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND))));
+        user.setEnabled(true);
+        user= userRepository.save(user);
 
         Cart cart = new Cart();
         cart.setUser(user);
@@ -65,7 +67,6 @@ public class UserServiceImpl implements UserService {
 
 
         log.info("Saving user to database");
-        user= userRepository.save(user);
         return modelMapper.map(user, UserResponse.class);
     }
 
@@ -93,7 +94,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String deleteUser(Long userId){
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
+        User user = userRepository.findByIdAndEnabledIsTrue(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
         userRepository.delete(user);
         return "user with "+ userId +" was deleted successfully";
     }
@@ -101,19 +102,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse findUserById(Long userId){
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
+        User user = userRepository.findByIdAndEnabledIsTrue(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
         return modelMapper.map(user, UserResponse.class);
     }
 
     @Override
     public UserResponse getProfile(Principal principal){
-        User user = userRepository.findByUsername(principal.getName()).orElseThrow(() -> new ResourceNotFoundException("user", "userId", principal.getName()));
+        User user = userRepository.findByUsernameAndEnabledIsTrue(principal.getName()).orElseThrow(() -> new ResourceNotFoundException("user", "userId", principal.getName()));
         return modelMapper.map(user, UserResponse.class);
     }
 
     @Override
     public PageCustomResponse<UserResponse> findAllUsers(Pageable pageable){
-        Page<User> page = userRepository.findAll(pageable);
+        Page<User> page = userRepository.findByEnabledIsTrue(pageable);
         return PageCustomResponse.<UserResponse>builder()
                 .pageNo(page.getNumber()+1)
                 .pageSize(page.getSize())
@@ -124,7 +125,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse changePassword(Principal principal, ChangePasswordRequest request){
-        User user = userRepository.findByUsername(principal.getName()).orElseThrow(() -> new ResourceNotFoundException("user", "userId", principal.getName()));
+        User user = userRepository.findByUsernameAndEnabledIsTrue(principal.getName()).orElseThrow(() -> new ResourceNotFoundException("user", "userId", principal.getName()));
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new AppException(ErrorCode.INVALID_PASSWORD);
         }

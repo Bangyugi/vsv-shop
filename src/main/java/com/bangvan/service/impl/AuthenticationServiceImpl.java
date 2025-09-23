@@ -13,8 +13,10 @@ import com.bangvan.exception.ErrorCode;
 import com.bangvan.repository.CartRepository;
 import com.bangvan.repository.RoleRepository;
 import com.bangvan.repository.UserRepository;
+import com.bangvan.repository.VerificationCodeRepository;
 import com.bangvan.service.AuthenticationService;
 import com.bangvan.service.JwtService;
+import com.bangvan.service.VerificationCodeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -25,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Service
@@ -38,6 +41,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final CartRepository cartRepository;
+    private final VerificationCodeRepository verificationCodeRepository;
+    private final VerificationCodeService verificationCodeService;
 
 
     private void authenticateUser(LoginRequest loginRequest) {
@@ -49,8 +54,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new AppException(ErrorCode.USER_UNAUTHENTICATED);
         }
     }
-
-
 
 
 
@@ -83,16 +86,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public UserResponse register(RegisterRequest request){
+    public UserResponse register(RegisterRequest request) {
+
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
 
-        if (userRepository.existsByPhone(request.getPhone())){
+        if (userRepository.existsByPhone(request.getPhone())) {
             throw new AppException(ErrorCode.PHONE_EXISTED);
         }
 
-        if (userRepository.existsByUsername(request.getUsername())){
+        if (userRepository.existsByUsername(request.getUsername())) {
             throw new AppException(ErrorCode.USERNAME_EXISTED);
         }
 
@@ -102,14 +107,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.setRoles(Set.of(roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND))));
 
+        user = userRepository.save(user);
         Cart cart = new Cart();
         cart.setUser(user);
         cartRepository.save(cart);
 
 
+        String otp = verificationCodeService.generateVerificationCode();
+        VerificationCode verificationCode = new VerificationCode();
+        verificationCode.setOtp(otp);
+        verificationCode.setEmail(request.getEmail());
+        verificationCode.setExpiredTime(LocalDateTime.now().plusMinutes(15));
+        verificationCode.setUser(user);
+
+        verificationCodeRepository.save(verificationCode);
+        verificationCodeService.sendVerificationOtpEmail(request.getEmail());
 
         log.info("Saving user to database");
-        user= userRepository.save(user);
         return modelMapper.map(user, UserResponse.class);
     }
 
@@ -132,6 +146,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .expiredTime(new Timestamp(now + jwtService.getExpirationTime()))
                 .build();
     }
+
 
 
 }
