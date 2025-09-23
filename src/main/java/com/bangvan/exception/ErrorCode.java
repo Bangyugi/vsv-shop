@@ -44,7 +44,8 @@ public enum ErrorCode {
     EMAIL_SEND_FAILED(1024,"Failed to send email",HttpStatus.BAD_REQUEST ),
     INVALID_OTP(1025,"Invalid OTP",HttpStatus.BAD_REQUEST ),
     EXPIRED_OTP(1026,"Expired OTP",HttpStatus.BAD_REQUEST ),
-    EMAIL_REQUEST_FAILED(1027,"Failed to send email",HttpStatus.BAD_REQUEST );
+    EMAIL_REQUEST_FAILED(1027,"Failed to send email",HttpStatus.BAD_REQUEST ),
+    SELLER_EXISTED(1028,"Seller already exists",HttpStatus.BAD_REQUEST );
 
 
     ErrorCode(int code, String message, HttpStatus status) {

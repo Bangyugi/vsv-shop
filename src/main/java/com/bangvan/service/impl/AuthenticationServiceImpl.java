@@ -121,7 +121,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         verificationCode.setUser(user);
 
         verificationCodeRepository.save(verificationCode);
-        verificationCodeService.sendVerificationOtpEmail(request.getEmail());
+//        verificationCodeService.sendVerificationOtpEmail(request.getEmail());
 
         log.info("Saving user to database");
         return modelMapper.map(user, UserResponse.class);

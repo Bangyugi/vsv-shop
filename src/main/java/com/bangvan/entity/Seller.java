@@ -21,10 +21,9 @@ public class Seller extends User {
     BankDetails bankDetails = new BankDetails();
 
     @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "pickup_address_id")
-    Address pickupAddress = new Address();
+    Address pickupAddress ;
 
-    String GSTIN;
+    String gstin;
 
     Boolean isEmailVerified = false;
 
