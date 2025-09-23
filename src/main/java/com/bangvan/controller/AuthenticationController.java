@@ -7,6 +7,7 @@ import com.bangvan.dto.response.ApiResponse;
 import com.bangvan.service.AuthenticationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,7 @@ public class AuthenticationController {
 
     @Operation(summary = "Register", description = "Register API")
     @PostMapping(value = "/register")
-    public ResponseEntity<ApiResponse> register (@RequestBody RegisterRequest request){
+    public ResponseEntity<ApiResponse> register (@RequestBody RegisterRequest request) throws MessagingException {
         ApiResponse authentication =  ApiResponse.success(200, "User registered successfully", authenticationService.register(request));
 
         return new ResponseEntity<>(authentication, HttpStatus.OK);

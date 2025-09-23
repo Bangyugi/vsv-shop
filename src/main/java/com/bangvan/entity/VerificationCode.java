@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "verification_codes")
 @Getter
@@ -25,4 +27,5 @@ public class VerificationCode {
     @JoinColumn(name = "user_id")
     User user;
 
+    LocalDateTime expiredTime;
 }
