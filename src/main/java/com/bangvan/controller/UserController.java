@@ -62,7 +62,7 @@ public class UserController {
 
     @Operation(summary = "Find User's Profile", description = "Find User's Profile")
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse> findUserById(Principal principal){
+    public ResponseEntity<ApiResponse> findUserProfile(Principal principal){
         ApiResponse apiResponse = ApiResponse.success(200, "User found successfully", userService.getProfile(principal));
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }

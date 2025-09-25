@@ -12,7 +12,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Seller  {
+public class Seller  extends AbstractEntity{
 
     @Id
     private Long id;
@@ -21,6 +21,8 @@ public class Seller  {
     @MapsId
     @JoinColumn(name = "id")
     private User user;
+
+
 
     @Embedded
     BusinessDetails businessDetails = new BusinessDetails();

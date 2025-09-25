@@ -39,7 +39,6 @@ public class RegisterRequest {
     @NotBlank
     private LocalDate birthDate;
 
-
     private Gender gender;
 
 }
