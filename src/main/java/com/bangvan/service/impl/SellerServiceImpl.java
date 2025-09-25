@@ -39,25 +39,31 @@ public class SellerServiceImpl implements SellerService {
             throw new AppException(ErrorCode.SELLER_EXISTED);
         }
 
-
-
-        Seller seller = modelMapper.map(user, Seller.class);
+        Seller seller = new Seller();
+        seller.setUser(user);
 
         seller.setBusinessDetails(request.getBusinessDetails());
         seller.setBankDetails(request.getBankDetails());
         seller.setGstin(request.getGstin());
 
         Address pickupAddress = request.getPickupAddress();
-        pickupAddress.setUser(seller);
+        pickupAddress.setUser(user);
         seller.setPickupAddress(pickupAddress);
 
         Role sellerRole = roleRepository.findByName("ROLE_SELLER").orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
-        seller.getRoles().add(sellerRole);
+        user.getRoles().add(sellerRole);
+        userRepository.save(user);
 
         seller = sellerRepository.save(seller);
 
-        return modelMapper.map(seller, SellerResponse.class);
+        SellerResponse sellerResponse = modelMapper.map(user, SellerResponse.class);
+        sellerResponse.setBusinessDetails(seller.getBusinessDetails());
+        sellerResponse.setBankDetails(seller.getBankDetails());
+        sellerResponse.setPickupAddress(seller.getPickupAddress());
+        sellerResponse.setGstin(seller.getGstin());
+        sellerResponse.setIsEmailVerified(seller.getIsEmailVerified());
+        sellerResponse.setAccountStatus(seller.getAccountStatus());
 
-
+        return sellerResponse;
     }
 }
