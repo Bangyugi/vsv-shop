@@ -22,6 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -60,8 +62,13 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public PageCustomResponse<ProductResponse> getAllProducts(Pageable pageable) {
-        Page<Product> productPage = productRepository.findAll(pageable);
+    public PageCustomResponse<ProductResponse> getAllProducts(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        Page<Product> productPage;
+        if (minPrice != null && maxPrice != null) {
+            productPage = productRepository.findByPriceBetween(minPrice, maxPrice, pageable);
+        } else {
+            productPage = productRepository.findAll(pageable);
+        }
 
         List<ProductResponse> productResponses = productPage.getContent().stream()
                 .map(product -> modelMapper.map(product, ProductResponse.class)
@@ -114,7 +121,68 @@ public class ProductServiceImpl implements ProductService {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
         productRepository.delete(product);
-        // 5. Trả về thông báo thành công
         return "Product with ID " + productId + " has been deleted successfully.";
+    }
+
+    @Override
+    public Integer calculateDiscountPercentage(BigDecimal price, BigDecimal sellingPrice) {
+        if (price == null || price.compareTo(BigDecimal.ZERO) == 0) {
+            return 0;
+        }
+        if (sellingPrice == null || sellingPrice.compareTo(BigDecimal.ZERO) < 0) {
+            return 0;
+        }
+        BigDecimal discount = price.subtract(sellingPrice);
+        BigDecimal discountPercentage = discount.multiply(new BigDecimal("100")).divide(price, 0, RoundingMode.HALF_UP);
+        return discountPercentage.intValue();
+    }
+
+    @Transactional
+    @Override
+    public ProductResponse updateProductStock(Long productId, Integer quantity, Principal principal) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+        if (!product.getSeller().getId().equals(seller.getId())) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        product.setQuantity(quantity);
+        product.setInStock(quantity > 0);
+        Product updatedProduct = productRepository.save(product);
+        return modelMapper.map(updatedProduct, ProductResponse.class);
+    }
+
+    @Override
+    public PageCustomResponse<ProductResponse> findProductBySeller(Long sellerId, Pageable pageable) {
+        Page<Product> productPage = productRepository.findBySellerId(sellerId, pageable);
+        List<ProductResponse> productResponses = productPage.getContent().stream()
+                .map(product -> modelMapper.map(product, ProductResponse.class))
+                .collect(Collectors.toList());
+
+        return PageCustomResponse.<ProductResponse>builder()
+                .pageNo(productPage.getNumber() + 1)
+                .pageSize(productPage.getSize())
+                .totalPages(productPage.getTotalPages())
+                .totalElements(productPage.getTotalElements())
+                .pageContent(productResponses)
+                .build();
+    }
+
+    @Override
+    public PageCustomResponse<ProductResponse> searchProduct(String keyword, Pageable pageable) {
+        Page<Product> productPage = productRepository.findByTitleContainingIgnoreCase(keyword, pageable);
+        List<ProductResponse> productResponses = productPage.getContent().stream()
+                .map(product -> modelMapper.map(product, ProductResponse.class))
+                .collect(Collectors.toList());
+
+        return PageCustomResponse.<ProductResponse>builder()
+                .pageNo(productPage.getNumber() + 1)
+                .pageSize(productPage.getSize())
+                .totalPages(productPage.getTotalPages())
+                .totalElements(productPage.getTotalElements())
+                .pageContent(productResponses)
+                .build();
     }
 }
