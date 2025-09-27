@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.security.Principal;
 
 @RestController
@@ -49,6 +50,8 @@ public class ProductController {
     @GetMapping
     @Operation(summary = "Get all products with pagination and sorting", description = "Endpoint to fetch a paginated list of all products")
     public ResponseEntity<ApiResponse> getAllProducts(
+            @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
+            @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
             @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
             @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
@@ -58,7 +61,7 @@ public class ProductController {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.OK.value(),
                 "Products fetched successfully",
-                productService.getAllProducts(pageable)
+                productService.getAllProducts(minPrice,maxPrice,pageable)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
@@ -88,6 +91,57 @@ public class ProductController {
                 HttpStatus.OK.value(),
                 productService.deleteProductById(productId, principal),
                 null
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+    @PatchMapping("/{productId}/stock")
+    @PreAuthorize("hasRole('SELLER')")
+    @Operation(summary = "Update a product's stock", description = "Endpoint for sellers to update their own product's stock")
+    public ResponseEntity<ApiResponse> updateProductStock(
+            @PathVariable Long productId,
+            @RequestParam Integer quantity,
+            Principal principal) {
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Product stock updated successfully",
+                productService.updateProductStock(productId, quantity, principal)
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+    @GetMapping("/seller/{sellerId}")
+    @Operation(summary = "Get products by seller ID", description = "Endpoint to fetch products by seller ID")
+    public ResponseEntity<ApiResponse> getProductsBySeller(
+            @PathVariable Long sellerId,
+            @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = "ASC", required = false) String sortDir
+    ) {
+        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Products fetched successfully",
+                productService.findProductBySeller(sellerId, pageable)
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search for products", description = "Endpoint to search for products by keyword")
+    public ResponseEntity<ApiResponse> searchProduct(
+            @RequestParam(value = "keyword") String keyword,
+            @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = "ASC", required = false) String sortDir
+    ) {
+        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Products fetched successfully",
+                productService.searchProduct(keyword, pageable)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
