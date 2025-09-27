@@ -1,5 +1,6 @@
 package com.bangvan.repository;
 
+import com.bangvan.entity.Seller;
 import com.bangvan.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,4 +31,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsernameAndEnabledIsTrue(String name);
 
     Page<User> findByEnabledIsTrue(Pageable pageable);
+
+
+
 }

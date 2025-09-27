@@ -1,5 +1,6 @@
 package com.bangvan.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -24,6 +25,7 @@ public class Category {
 
     @ManyToOne
     @JoinColumn(name = "parent_category_id")
+    @JsonIgnore
     private Category parentCategory;
 
     @NotNull

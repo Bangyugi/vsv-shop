@@ -21,7 +21,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,35 +48,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final VerificationCodeService verificationCodeService;
 
 
-    private void authenticateUser(LoginRequest loginRequest) {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
-            );
-        } catch (Exception exception) {
-            throw new AppException(ErrorCode.USER_UNAUTHENTICATED);
-        }
-    }
-
-
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TokenResponse login(LoginRequest loginRequest) {
-        User user = userRepository.findByUsername(loginRequest.getUsername())
-                .orElseThrow(() -> new AppException(ErrorCode.ACCESS_DENIED));
-
-        if (!user.isEnabled()) {
+        Authentication authentication;
+        try{
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+            );
+        }catch (DisabledException e){
             throw new AppException(ErrorCode.USER_NOT_VERIFIED);
+        }catch (BadCredentialsException e){
+            throw new AppException(ErrorCode.WRONG_USERNAME_OR_PASSWORD);
+        }catch (Exception e){
+            throw new AppException(ErrorCode.USER_UNAUTHENTICATED);
         }
 
-        // Xác thực username và password
-        authenticateUser(loginRequest);
-
-
+        User user = (User) authentication.getPrincipal();
         String jwtToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-
 
         long now = System.currentTimeMillis();
 

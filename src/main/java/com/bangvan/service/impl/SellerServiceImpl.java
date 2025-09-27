@@ -1,7 +1,10 @@
 package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.seller.BecomeSellerRequest;
+import com.bangvan.dto.request.seller.UpdateSellerRequest;
+import com.bangvan.dto.response.PageCustomResponse;
 import com.bangvan.dto.response.seller.SellerResponse;
+import com.bangvan.dto.response.user.UserResponse;
 import com.bangvan.entity.Address;
 import com.bangvan.entity.Role;
 import com.bangvan.entity.Seller;
@@ -15,6 +18,8 @@ import com.bangvan.repository.UserRepository;
 import com.bangvan.service.SellerService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +34,13 @@ public class SellerServiceImpl implements SellerService {
     private final SellerRepository sellerRepository;
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
+
+    @Override
+    public SellerResponse getProfile(Principal principal){
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
+        return modelMapper.map(seller, SellerResponse.class);
+    }
 
     @Transactional
     @Override
@@ -56,14 +68,41 @@ public class SellerServiceImpl implements SellerService {
 
         seller = sellerRepository.save(seller);
 
-        SellerResponse sellerResponse = modelMapper.map(user, SellerResponse.class);
-        sellerResponse.setBusinessDetails(seller.getBusinessDetails());
-        sellerResponse.setBankDetails(seller.getBankDetails());
-        sellerResponse.setPickupAddress(seller.getPickupAddress());
-        sellerResponse.setGstin(seller.getGstin());
-        sellerResponse.setIsEmailVerified(seller.getIsEmailVerified());
-        sellerResponse.setAccountStatus(seller.getAccountStatus());
-
-        return sellerResponse;
+        return modelMapper.map(seller,SellerResponse.class);
     }
+
+
+    @Transactional
+    @Override
+    public SellerResponse updateSeller(UpdateSellerRequest request, Principal principal){
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
+        seller.setBusinessDetails(request.getBusinessDetails());
+        seller.setBankDetails(request.getBankDetails());
+        seller.setPickupAddress(request.getPickupAddress());
+        seller.setGstin(request.getGstin());
+        sellerRepository.save(seller);
+        return modelMapper.map(seller, SellerResponse.class);
+    }
+
+    @Transactional
+    @Override
+    public String deleteSeller(Principal principal){
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
+        sellerRepository.delete(seller);
+        return "Delete seller successfully";
+    }
+
+    @Override
+    public PageCustomResponse<SellerResponse> getAllSellers(Pageable pageable){
+        Page<Seller> page = sellerRepository.findByUser_EnabledIsTrue(pageable);
+        return PageCustomResponse.<SellerResponse>builder()
+                .pageNo(page.getNumber()+1)
+                .pageSize(page.getSize())
+                .totalPages(page.getTotalPages())
+                .totalElements(page.getTotalElements())
+                .pageContent(page.getContent().stream().map(seller -> modelMapper.map(seller, SellerResponse.class)).toList()).build();
+    }
+
 }

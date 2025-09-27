@@ -32,7 +32,7 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
         VerificationCode verificationCode = verificationCodeRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("email", "email", userEmail));
         try {
-            if (verificationCode == null || verificationCode.getExpiredTime().isBefore(LocalDateTime.now())) {
+            if (verificationCode.getExpiredTime().isBefore(LocalDateTime.now())) {
                 String otp = generateVerificationCode();
                 verificationCode = new VerificationCode();
                 verificationCode.setOtp(otp);

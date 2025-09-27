@@ -1,0 +1,120 @@
+package com.bangvan.service.impl;
+
+import com.bangvan.dto.request.product.CreateProductRequest;
+import com.bangvan.dto.request.product.UpdateProductRequest;
+import com.bangvan.dto.response.PageCustomResponse;
+import com.bangvan.dto.response.product.ProductResponse;
+import com.bangvan.entity.Category;
+import com.bangvan.entity.Product;
+import com.bangvan.entity.Seller;
+import com.bangvan.exception.AppException;
+import com.bangvan.exception.ErrorCode;
+import com.bangvan.exception.ResourceNotFoundException;
+import com.bangvan.repository.CategoryRepository;
+import com.bangvan.repository.ProductRepository;
+import com.bangvan.repository.SellerRepository;
+import com.bangvan.service.ProductService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ProductServiceImpl implements ProductService {
+
+    private final SellerRepository sellerRepository;
+    private final CategoryRepository categoryRepository;
+    private final ModelMapper modelMapper;
+    private final ProductRepository productRepository;
+
+    @Transactional
+    @Override
+    public ProductResponse createProduct(CreateProductRequest request, Principal principal){
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
+        Category category = categoryRepository.findById(request.getCategoryId()).orElseThrow(() -> new ResourceNotFoundException("category", "categoryId", request.getCategoryId()));
+        Product product = modelMapper.map(request, Product.class);
+        product.setSeller(seller);
+        product.setCategory(category);
+        product.setInStock(product.getQuantity()>0);
+
+        product = productRepository.save(product);
+        return modelMapper.map(product, ProductResponse.class);
+    }
+
+    @Override
+    public ProductResponse getProductById(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+
+        return modelMapper.map(product, ProductResponse.class);
+    }
+
+    @Override
+    public PageCustomResponse<ProductResponse> getAllProducts(Pageable pageable) {
+        Page<Product> productPage = productRepository.findAll(pageable);
+
+        List<ProductResponse> productResponses = productPage.getContent().stream()
+                .map(product -> modelMapper.map(product, ProductResponse.class)
+                )
+                .collect(Collectors.toList());
+
+        return PageCustomResponse.<ProductResponse>builder()
+                .pageNo(productPage.getNumber() + 1)
+                .pageSize(productPage.getSize())
+                .totalPages(productPage.getTotalPages())
+                .totalElements(productPage.getTotalElements())
+                .pageContent(productResponses)
+                .build();
+    }
+
+    @Transactional
+    @Override
+    public ProductResponse updateProductById(Long productId, UpdateProductRequest request, Principal principal) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+        if (!product.getSeller().getId().equals(seller.getId())) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category", "id", request.getCategoryId()));
+            product.setCategory(category);
+        }
+        modelMapper.map(request, product);
+        if(request.getQuantity() != null){
+            product.setInStock(request.getQuantity() > 0);
+        }
+        Product updatedProduct = productRepository.save(product);
+        return modelMapper.map(updatedProduct, ProductResponse.class);
+
+    }
+
+    @Transactional
+    @Override
+    public String deleteProductById(Long productId, Principal principal) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+        if (!product.getSeller().getId().equals(seller.getId())) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        productRepository.delete(product);
+        // 5. Trả về thông báo thành công
+        return "Product with ID " + productId + " has been deleted successfully.";
+    }
+}

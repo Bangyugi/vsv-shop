@@ -62,13 +62,13 @@ public class UserController {
 
     @Operation(summary = "Find User's Profile", description = "Find User's Profile")
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse> findUserById(Principal principal){
+    public ResponseEntity<ApiResponse> findUserProfile(Principal principal){
         ApiResponse apiResponse = ApiResponse.success(200, "User found successfully", userService.getProfile(principal));
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
     @Operation(summary = "Find All Users", description = "Find All Users")
-    @GetMapping("/find-all")
+    @GetMapping
     public ResponseEntity<ApiResponse> findAllUsers(
             @RequestParam(value= "pageNo", defaultValue = "1", required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
