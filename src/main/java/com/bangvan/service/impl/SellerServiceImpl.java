@@ -39,9 +39,7 @@ public class SellerServiceImpl implements SellerService {
     public SellerResponse getProfile(Principal principal){
         String username = principal.getName();
         Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
-        SellerResponse sellerResponse = modelMapper.map(seller, SellerResponse.class);
-        sellerResponse.setUser(modelMapper.map(seller.getUser(), UserResponse.class));
-        return sellerResponse;
+        return modelMapper.map(seller, SellerResponse.class);
     }
 
     @Transactional
@@ -70,16 +68,7 @@ public class SellerServiceImpl implements SellerService {
 
         seller = sellerRepository.save(seller);
 
-        SellerResponse sellerResponse = new SellerResponse();
-        sellerResponse.setUser(modelMapper.map(user, UserResponse.class));
-        sellerResponse.setBusinessDetails(seller.getBusinessDetails());
-        sellerResponse.setBankDetails(seller.getBankDetails());
-        sellerResponse.setPickupAddress(seller.getPickupAddress());
-        sellerResponse.setGstin(seller.getGstin());
-        sellerResponse.setIsEmailVerified(seller.getIsEmailVerified());
-        sellerResponse.setAccountStatus(seller.getAccountStatus());
-
-        return sellerResponse;
+        return modelMapper.map(seller,SellerResponse.class);
     }
 
 
@@ -113,11 +102,7 @@ public class SellerServiceImpl implements SellerService {
                 .pageSize(page.getSize())
                 .totalPages(page.getTotalPages())
                 .totalElements(page.getTotalElements())
-                .pageContent(page.getContent().stream().map(seller -> {
-                    SellerResponse sellerResponse = modelMapper.map(seller, SellerResponse.class);
-                    sellerResponse.setUser(modelMapper.map(seller.getUser(), UserResponse.class));
-                    return sellerResponse;
-                }).toList()).build();
+                .pageContent(page.getContent().stream().map(seller -> modelMapper.map(seller, SellerResponse.class)).toList()).build();
     }
 
 }

@@ -4,6 +4,7 @@ import com.bangvan.dto.response.user.UserResponse;
 import com.bangvan.entity.Address;
 import com.bangvan.entity.BankDetails;
 import com.bangvan.entity.BusinessDetails;
+import com.bangvan.entity.User;
 import com.bangvan.utils.AccountStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -15,7 +16,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SellerResponse {
-    private UserResponse user;
+    private User user;
     private String avatar;
     private BusinessDetails businessDetails;
     private BankDetails bankDetails;

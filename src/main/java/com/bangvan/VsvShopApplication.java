@@ -28,4 +28,3 @@ public class VsvShopApplication {
     }
 
 }
-//4:25:07

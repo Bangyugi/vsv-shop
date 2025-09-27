@@ -68,7 +68,7 @@ public class UserController {
     }
 
     @Operation(summary = "Find All Users", description = "Find All Users")
-    @GetMapping("/find-all")
+    @GetMapping
     public ResponseEntity<ApiResponse> findAllUsers(
             @RequestParam(value= "pageNo", defaultValue = "1", required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,

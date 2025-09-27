@@ -41,7 +41,7 @@ public class SellerController {
     }
 
     @Operation(summary = "Get List Seller", description = "Get List Seller API")
-    @GetMapping("/find-all")
+    @GetMapping
     public ResponseEntity<ApiResponse> getListSeller(
             @RequestParam(value= "pageNo", defaultValue = "1", required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,

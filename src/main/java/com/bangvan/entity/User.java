@@ -87,6 +87,7 @@ public class User extends  AbstractEntity implements UserDetails {
     Set<Coupon> usedCoupons = new HashSet<>();
 
     @OneToOne(mappedBy = "user",cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     Cart cart;
 
 

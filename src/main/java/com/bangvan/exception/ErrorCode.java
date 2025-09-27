@@ -24,7 +24,7 @@ public enum ErrorCode {
     USER_ALREADY_EXISTS(1012, "User already exists", HttpStatus.BAD_REQUEST),
     USER_EMAIL_OR_PHONE_CAN_NOT_CHANGE(1013, "User email or phone can not change", HttpStatus.BAD_REQUEST),
     TOKEN_EXPIRED(1014, "Token expired", HttpStatus.BAD_REQUEST),
-    WRONG_PASSWORD(1015, "Wrong password", HttpStatus.BAD_REQUEST),
+    WRONG_USERNAME_OR_PASSWORD(1015, "Wrong username or password", HttpStatus.BAD_REQUEST),
     WRONG_OTP(1016, "Wrong OTP", HttpStatus.BAD_REQUEST),
     USER_NOT_VERIFIED(1017, "User not verified", HttpStatus.BAD_REQUEST),
     PHONE_NUMBER_EXISTED(1018, "Phone number already exists", HttpStatus.BAD_REQUEST),
