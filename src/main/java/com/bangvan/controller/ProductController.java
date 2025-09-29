@@ -52,6 +52,11 @@ public class ProductController {
     public ResponseEntity<ApiResponse> getAllProducts(
             @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
+            @RequestParam(value = "color", required = false) String color,
+            @RequestParam(value = "size", required = false) String size,
+            @RequestParam(value = "seller", required = false) Long sellerId,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "category", required = false) Long categoryId,
             @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
             @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
@@ -61,7 +66,7 @@ public class ProductController {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.OK.value(),
                 "Products fetched successfully",
-                productService.getAllProducts(minPrice,maxPrice,pageable)
+                productService.getAllProducts(minPrice, maxPrice, color, size, sellerId, keyword, categoryId, pageable)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
