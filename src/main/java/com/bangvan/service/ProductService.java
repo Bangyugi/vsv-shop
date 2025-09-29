@@ -18,7 +18,7 @@ public interface ProductService {
 
 
 
-    PageCustomResponse<ProductResponse> getAllProducts(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+    PageCustomResponse<ProductResponse> getAllProducts(BigDecimal minPrice, BigDecimal maxPrice, String color, String size, Long sellerId, String keyword, Long categoryId, Pageable pageable);
 
     @Transactional
     ProductResponse updateProductById(Long productId, UpdateProductRequest request, Principal principal);

@@ -14,17 +14,20 @@ import com.bangvan.repository.CategoryRepository;
 import com.bangvan.repository.ProductRepository;
 import com.bangvan.repository.SellerRepository;
 import com.bangvan.service.ProductService;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -62,13 +65,34 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public PageCustomResponse<ProductResponse> getAllProducts(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
-        Page<Product> productPage;
-        if (minPrice != null && maxPrice != null) {
-            productPage = productRepository.findByPriceBetween(minPrice, maxPrice, pageable);
-        } else {
-            productPage = productRepository.findAll(pageable);
-        }
+    public PageCustomResponse<ProductResponse> getAllProducts(BigDecimal minPrice, BigDecimal maxPrice, String color, String size, Long sellerId, String keyword, Long categoryId, Pageable pageable) {
+        Specification<Product> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (minPrice != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice));
+            }
+            if (maxPrice != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
+            }
+            if (color != null && !color.isEmpty()) {
+                predicates.add(criteriaBuilder.equal(root.get("color"), color));
+            }
+            if (size != null && !size.isEmpty()) {
+                predicates.add(criteriaBuilder.like(root.get("sizes"), "%" + size + "%"));
+            }
+            if (sellerId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("seller").get("id"), sellerId));
+            }
+            if (keyword != null && !keyword.isEmpty()) {
+                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), "%" + keyword.toLowerCase() + "%"));
+            }
+            if (categoryId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("category").get("id"), categoryId));
+            }
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
 
         List<ProductResponse> productResponses = productPage.getContent().stream()
                 .map(product -> modelMapper.map(product, ProductResponse.class)

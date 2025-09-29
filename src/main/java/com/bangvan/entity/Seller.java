@@ -12,7 +12,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Seller  extends AbstractEntity{
+public class Seller extends AbstractEntity{
 
     @Id
     private Long id;
