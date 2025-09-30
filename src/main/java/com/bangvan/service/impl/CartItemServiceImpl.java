@@ -4,6 +4,7 @@ import com.bangvan.dto.request.cart.UpdateCartItemRequest;
 import com.bangvan.dto.response.cart.CartItemResponse;
 import com.bangvan.entity.Cart;
 import com.bangvan.entity.CartItem;
+import com.bangvan.entity.Product;
 import com.bangvan.entity.User;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
@@ -48,6 +49,7 @@ public class CartItemServiceImpl implements CartItemService {
         updateCartTotals(cart);
     }
 
+
     @Transactional
     @Override
     public CartItemResponse updateCartItem(Principal principal, Long cartItemId, UpdateCartItemRequest request) {
@@ -58,17 +60,33 @@ public class CartItemServiceImpl implements CartItemService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "user", username));
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("CartItem", "ID", cartItemId));
+
         if (!cartItem.getCart().getId().equals(cart.getId())) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
-        cartItem.setQuantity(request.getQuantity());
-        cartItem.setPrice(cartItem.getProduct().getPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
-        cartItem.setSellingPrice(cartItem.getProduct().getSellingPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
-        cartItemRepository.save(cartItem);
+
+        Product product = cartItem.getProduct();
+        int requestedQuantity = request.getQuantity();
+        if (requestedQuantity > product.getQuantity()) {
+            throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
+                    "Only " + product.getQuantity() + " items left in stock.");
+        }
+
+        if (requestedQuantity <= 0) {
+            cart.getCartItems().remove(cartItem);
+            cartItemRepository.delete(cartItem);
+        } else {
+            cartItem.setQuantity(requestedQuantity);
+            cartItem.setPrice(product.getPrice().multiply(BigDecimal.valueOf(requestedQuantity)));
+            cartItem.setSellingPrice(product.getSellingPrice().multiply(BigDecimal.valueOf(requestedQuantity)));
+            cartItemRepository.save(cartItem);
+        }
+
         updateCartTotals(cart);
 
         return modelMapper.map(cartItem, CartItemResponse.class);
     }
+
 
     private void updateCartTotals(Cart cart) {
         BigDecimal totalPrice = BigDecimal.ZERO;
