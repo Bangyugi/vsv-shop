@@ -102,5 +102,11 @@ public class CartItemServiceImpl implements CartItemService {
         return discountPercentage;
     }
 
+    @Override
+    public CartItemResponse findCartItemById(Long cartItemId) {
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("CartItem", "ID", cartItemId));
+        return modelMapper.map(cartItem, CartItemResponse.class);
+    }
 
 }

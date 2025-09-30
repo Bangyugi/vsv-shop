@@ -49,4 +49,16 @@ public class CartItemController {
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
+
+    @GetMapping("/{cartItemId}")
+    @Operation(summary = "Get item from cart", description = "Get an item from the current user's shopping cart")
+    public ResponseEntity<ApiResponse> getCartItem(
+            @PathVariable Long cartItemId) {
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Item found successfully",
+                cartItemService.findCartItemById(cartItemId)
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
 }

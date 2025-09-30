@@ -12,4 +12,6 @@ public interface CartItemService {
 
     @Transactional
     CartItemResponse updateCartItem(Principal principal, Long cartItemId, UpdateCartItemRequest request);
+
+    CartItemResponse findCartItemById(Long cartItemId);
 }
