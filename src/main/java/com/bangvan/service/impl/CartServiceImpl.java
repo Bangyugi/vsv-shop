@@ -3,6 +3,8 @@ package com.bangvan.service.impl;
 import com.bangvan.dto.request.cart.AddItemToCartRequest;
 import com.bangvan.entity.CartItem;
 import com.bangvan.entity.Product;
+import com.bangvan.exception.AppException;
+import com.bangvan.exception.ErrorCode;
 import com.bangvan.repository.CartItemRepository;
 import com.bangvan.repository.ProductRepository;
 import com.bangvan.service.CartService;
@@ -48,10 +50,20 @@ public class CartServiceImpl implements CartService {
 
         if (existingCartItemOpt.isPresent()) {
             CartItem existingCartItem = existingCartItemOpt.get();
-            existingCartItem.setQuantity(existingCartItem.getQuantity() + request.getQuantity());
-            cartItemRepository.save(existingCartItem);
-        } else {
+            int newQuantity = existingCartItem.getQuantity() + request.getQuantity();
 
+            if (newQuantity > product.getQuantity()) {
+                throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
+                        "Cannot add " + request.getQuantity() + " more items. Only " + (product.getQuantity() - existingCartItem.getQuantity()) + " left in stock.");
+            }
+            existingCartItem.setQuantity(newQuantity);
+            cartItemRepository.save(existingCartItem);
+        }
+        else {
+            if (request.getQuantity() > product.getQuantity()) {
+                throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
+                        "Cannot add " + request.getQuantity() + " items. Only " + product.getQuantity() + " left in stock.");
+            }
             CartItem newCartItem = new CartItem();
             newCartItem.setProduct(product);
             newCartItem.setCart(cart);

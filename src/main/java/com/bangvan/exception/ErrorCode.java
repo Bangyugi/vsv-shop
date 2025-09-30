@@ -45,7 +45,12 @@ public enum ErrorCode {
     INVALID_OTP(1025,"Invalid OTP",HttpStatus.BAD_REQUEST ),
     EXPIRED_OTP(1026,"Expired OTP",HttpStatus.BAD_REQUEST ),
     EMAIL_REQUEST_FAILED(1027,"Failed to send email",HttpStatus.BAD_REQUEST ),
-    SELLER_EXISTED(1028,"Seller already exists",HttpStatus.BAD_REQUEST );
+    SELLER_EXISTED(1028,"Seller already exists",HttpStatus.BAD_REQUEST ),
+    ADDRESS_NOT_FOUND(1029,"Address not found",HttpStatus.BAD_REQUEST ),
+    CART_EMPTY(1030,"Cart is empty",HttpStatus.BAD_REQUEST ),
+    INVALID_INPUT(1031,"Invalid input",HttpStatus.BAD_REQUEST ),
+    ORDER_CANCELLATION_NOT_ALLOWED(1032,"Order cancellation not allowed",HttpStatus.BAD_REQUEST ),
+    PRODUCT_OUT_OF_STOCK(1033, "Product is out of stock", HttpStatus.BAD_REQUEST);;
 
 
     ErrorCode(int code, String message, HttpStatus status) {
