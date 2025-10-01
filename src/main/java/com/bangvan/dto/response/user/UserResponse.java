@@ -15,15 +15,15 @@ import java.util.Set;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
 public class UserResponse  {
-    Long id;
-    String username;
-    String email;
-    String phone;
-    String firstName;
-    String lastName;
-    String avatar;
-    Gender gender;
-    LocalDate birthDate;
-    Boolean enabled;
-    Set<Role> roles;
+    private Long id;
+    private String username;
+    private String email;
+    private String phone;
+    private String firstName;
+    private String lastName;
+    private String avatar;
+    private Gender gender;
+    private LocalDate birthDate;
+    private Boolean enabled;
+    private Set<Role> roles;
 }

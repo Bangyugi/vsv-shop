@@ -2,6 +2,7 @@ package com.bangvan.service;
 
 import com.bangvan.dto.request.product.CreateProductRequest;
 import com.bangvan.dto.request.product.UpdateProductRequest;
+import com.bangvan.dto.request.product.UpdateStockRequest;
 import com.bangvan.dto.response.PageCustomResponse;
 import com.bangvan.dto.response.product.ProductResponse;
 import org.springframework.data.domain.Pageable;
@@ -28,8 +29,10 @@ public interface ProductService {
 
     Integer calculateDiscountPercentage(BigDecimal price, BigDecimal sellingPrice);
 
+
+
     @Transactional
-    ProductResponse updateProductStock(Long productId, Integer quantity, Principal principal);
+    ProductResponse updateProductStock(Long variantId, UpdateStockRequest request, Principal principal);
 
     PageCustomResponse<ProductResponse> findProductBySeller(Long sellerId, Pageable pageable);
 

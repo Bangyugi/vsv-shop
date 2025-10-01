@@ -25,10 +25,9 @@ public class CartItem {
     Cart cart;
 
     @ManyToOne
-    @JoinColumn(name = "product_id")
-    Product product;
+    @JoinColumn(name = "variant_id")
+    ProductVariant variant;
 
-    String size;
 
     Integer quantity = 1;
 

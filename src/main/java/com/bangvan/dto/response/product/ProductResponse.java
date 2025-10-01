@@ -1,48 +1,30 @@
 package com.bangvan.dto.response.product;
 
 import com.bangvan.entity.Category;
-import com.bangvan.entity.Review;
+import com.bangvan.entity.ProductVariant;
 import com.bangvan.entity.Seller;
-import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-
 public class ProductResponse {
-    Long id;
-
-    String title;
-
-    String description;
-
-    BigDecimal price;
-
-    BigDecimal sellingPrice;
-
-    Integer discountPercent;
-
-    Integer quantity;
-
-    String color;
-
-    List<String> images = new ArrayList<>();
-
-    Integer numRatings;
-
-    Seller seller;
-
-    Category category;
-
-    String sizes;
-
-    Boolean inStock;
+    private Long id;
+    private String title;
+    private String description;
+    private BigDecimal price;
+    private BigDecimal sellingPrice;
+    private Integer discountPercent;
+    private List<String> images;
+    private Integer numRatings;
+    private Seller seller;
+    private Category category;
+    private Set<ProductVariant> variants;
+    private Integer totalQuantity;
 }

@@ -1,20 +1,13 @@
 package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.cart.AddItemToCartRequest;
-import com.bangvan.entity.CartItem;
-import com.bangvan.entity.Product;
+import com.bangvan.dto.response.cart.CartResponse;
+import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
-import com.bangvan.repository.CartItemRepository;
-import com.bangvan.repository.ProductRepository;
-import com.bangvan.service.CartService;
-
-import com.bangvan.dto.response.cart.CartResponse;
-import com.bangvan.entity.Cart;
-import com.bangvan.entity.User;
 import com.bangvan.exception.ResourceNotFoundException;
-import com.bangvan.repository.CartRepository;
-import com.bangvan.repository.UserRepository;
+import com.bangvan.repository.*;
+import com.bangvan.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
@@ -32,7 +25,7 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
-    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository; // Sử dụng repository mới
     private final CartItemRepository cartItemRepository;
 
     @Transactional
@@ -43,32 +36,34 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "user", username));
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "ID", request.getProductId()));
+        ProductVariant variant = productVariantRepository.findById(request.getVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", "ID", request.getVariantId()));
 
-        Optional<CartItem> existingCartItemOpt = cartItemRepository.findByCartAndProductAndSize(cart, product, request.getSize());
+        Product product = variant.getProduct();
+
+        Optional<CartItem> existingCartItemOpt = cartItemRepository.findByCartAndVariant(cart, variant);
 
         if (existingCartItemOpt.isPresent()) {
             CartItem existingCartItem = existingCartItemOpt.get();
             int newQuantity = existingCartItem.getQuantity() + request.getQuantity();
 
-            if (newQuantity > product.getQuantity()) {
+            if (newQuantity > variant.getQuantity()) {
                 throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
-                        "Cannot add " + request.getQuantity() + " more items. Only " + (product.getQuantity() - existingCartItem.getQuantity()) + " left in stock.");
+                        "Cannot add " + request.getQuantity() + " more items. Only " + (variant.getQuantity() - existingCartItem.getQuantity()) + " left in stock.");
             }
             existingCartItem.setQuantity(newQuantity);
+            existingCartItem.setPrice(product.getPrice().multiply(BigDecimal.valueOf(newQuantity)));
+            existingCartItem.setSellingPrice(product.getSellingPrice().multiply(BigDecimal.valueOf(newQuantity)));
             cartItemRepository.save(existingCartItem);
-        }
-        else {
-            if (request.getQuantity() > product.getQuantity()) {
+        } else {
+            if (request.getQuantity() > variant.getQuantity()) {
                 throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
-                        "Cannot add " + request.getQuantity() + " items. Only " + product.getQuantity() + " left in stock.");
+                        "Cannot add " + request.getQuantity() + " items. Only " + variant.getQuantity() + " left in stock.");
             }
             CartItem newCartItem = new CartItem();
-            newCartItem.setProduct(product);
+            newCartItem.setVariant(variant);
             newCartItem.setCart(cart);
             newCartItem.setQuantity(request.getQuantity());
-            newCartItem.setSize(request.getSize());
             newCartItem.setPrice(product.getPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
             newCartItem.setSellingPrice(product.getSellingPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
             cart.getCartItems().add(newCartItem);
@@ -85,10 +80,17 @@ public class CartServiceImpl implements CartService {
         BigDecimal totalDiscountedPrice = BigDecimal.ZERO;
         int totalItem = 0;
 
-        for (CartItem cartsItem : cart.getCartItems()) {
-            totalPrice = totalPrice.add(cartsItem.getPrice());
-            totalDiscountedPrice = totalDiscountedPrice.add(cartsItem.getSellingPrice());
-            totalItem += cartsItem.getQuantity();
+        for (CartItem cartItem : cart.getCartItems()) {
+            BigDecimal itemPrice = cartItem.getVariant().getProduct().getPrice();
+            BigDecimal itemSellingPrice = cartItem.getVariant().getProduct().getSellingPrice();
+            int quantity = cartItem.getQuantity();
+
+            cartItem.setPrice(itemPrice.multiply(BigDecimal.valueOf(quantity)));
+            cartItem.setSellingPrice(itemSellingPrice.multiply(BigDecimal.valueOf(quantity)));
+
+            totalPrice = totalPrice.add(cartItem.getPrice());
+            totalDiscountedPrice = totalDiscountedPrice.add(cartItem.getSellingPrice());
+            totalItem += quantity;
         }
 
         cart.setTotalSellingPrice(totalDiscountedPrice);
@@ -110,17 +112,15 @@ public class CartServiceImpl implements CartService {
 
         return modelMapper.map(cart, CartResponse.class);
     }
-    private BigDecimal calculateDiscountPercentage(BigDecimal totalPrice, BigDecimal totalDiscountedPrice) {
 
+    private BigDecimal calculateDiscountPercentage(BigDecimal totalPrice, BigDecimal totalDiscountedPrice) {
         if (totalPrice == null || totalDiscountedPrice == null ||
                 totalPrice.compareTo(BigDecimal.ZERO) <= 0 ||
                 totalDiscountedPrice.compareTo(totalPrice) > 0) {
             return BigDecimal.ZERO;
         }
         BigDecimal discount = totalPrice.subtract(totalDiscountedPrice);
-        BigDecimal discountPercentage = discount
-                .multiply(new BigDecimal("100"))
+        return discount.multiply(new BigDecimal("100"))
                 .divide(totalPrice, 2, RoundingMode.HALF_UP);
-        return discountPercentage;
     }
 }

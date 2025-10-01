@@ -11,11 +11,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddItemToCartRequest {
-    @NotNull(message = "Product ID cannot be null")
-    private Long productId;
+    @NotNull(message = "Product Variant ID cannot be null")
+    private Long variantId;
 
     @NotNull(message = "Quantity cannot be null")
     private Integer quantity;
-
-    private String size;
 }

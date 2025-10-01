@@ -2,16 +2,16 @@ package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.product.CreateProductRequest;
 import com.bangvan.dto.request.product.UpdateProductRequest;
+import com.bangvan.dto.request.product.UpdateStockRequest;
 import com.bangvan.dto.response.PageCustomResponse;
 import com.bangvan.dto.response.product.ProductResponse;
-import com.bangvan.entity.Category;
-import com.bangvan.entity.Product;
-import com.bangvan.entity.Seller;
+import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
 import com.bangvan.repository.CategoryRepository;
 import com.bangvan.repository.ProductRepository;
+import com.bangvan.repository.ProductVariantRepository;
 import com.bangvan.repository.SellerRepository;
 import com.bangvan.service.ProductService;
 import jakarta.persistence.criteria.Predicate;
@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,28 +41,52 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ModelMapper modelMapper;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository; // Thêm repository mới
 
     @Transactional
     @Override
-    public ProductResponse createProduct(CreateProductRequest request, Principal principal){
+    public ProductResponse createProduct(CreateProductRequest request, Principal principal) {
         String username = principal.getName();
-        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
-        Category category = categoryRepository.findById(request.getCategoryId()).orElseThrow(() -> new ResourceNotFoundException("category", "categoryId", request.getCategoryId()));
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", request.getCategoryId()));
+
         Product product = modelMapper.map(request, Product.class);
         product.setSeller(seller);
         product.setCategory(category);
-        product.setInStock(product.getQuantity()>0);
+        product.setVariants(new HashSet<>());
 
-        product = productRepository.save(product);
-        return modelMapper.map(product, ProductResponse.class);
+
+        for (ProductVariant variantRequest : request.getVariants()) {
+            ProductVariant newVariant = new ProductVariant();
+            newVariant.setColor(variantRequest.getColor());
+            newVariant.setSize(variantRequest.getSize());
+            newVariant.setQuantity(variantRequest.getQuantity());
+            String sku = (product.getTitle() + "-" + variantRequest.getColor() + "-" + variantRequest.getSize())
+                    .replaceAll("\\s+", "-").toUpperCase();
+            newVariant.setSku(sku);
+            newVariant.setProduct(product);
+            product.getVariants().add(newVariant);
+        }
+
+        Product savedProduct = productRepository.save(product);
+        return mapProductToResponse(savedProduct);
     }
+
+
+    private ProductResponse mapProductToResponse(Product product) {
+        ProductResponse response = modelMapper.map(product, ProductResponse.class);
+        response.setTotalQuantity(product.getTotalQuantity());
+        return response;
+    }
+
 
     @Override
     public ProductResponse getProductById(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
-
-        return modelMapper.map(product, ProductResponse.class);
+        return mapProductToResponse(product);
     }
 
     @Override
@@ -75,10 +100,10 @@ public class ProductServiceImpl implements ProductService {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
             }
             if (color != null && !color.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("color"), color));
+                predicates.add(criteriaBuilder.equal(root.join("variants").get("color"), color));
             }
             if (size != null && !size.isEmpty()) {
-                predicates.add(criteriaBuilder.like(root.get("sizes"), "%" + size + "%"));
+                predicates.add(criteriaBuilder.equal(root.join("variants").get("size"), size));
             }
             if (sellerId != null) {
                 predicates.add(criteriaBuilder.equal(root.get("seller").get("id"), sellerId));
@@ -89,14 +114,13 @@ public class ProductServiceImpl implements ProductService {
             if (categoryId != null) {
                 predicates.add(criteriaBuilder.equal(root.get("category").get("id"), categoryId));
             }
+            query.distinct(true);
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<Product> productPage = productRepository.findAll(spec, pageable);
-
         List<ProductResponse> productResponses = productPage.getContent().stream()
-                .map(product -> modelMapper.map(product, ProductResponse.class)
-                )
+                .map(this::mapProductToResponse)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<ProductResponse>builder()
@@ -116,22 +140,48 @@ public class ProductServiceImpl implements ProductService {
         String username = principal.getName();
         Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+
         if (!product.getSeller().getId().equals(seller.getId())) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
+
+        // Cập nhật các trường thông thường của sản phẩm một cách thủ công
+        // để tránh ModelMapper thay thế collection
+        product.setTitle(request.getTitle());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setSellingPrice(request.getSellingPrice());
+        product.setDiscountPercent(request.getDiscountPercent());
+        if(request.getImages() != null){
+            product.setImages(request.getImages());
+        }
+
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("Category", "id", request.getCategoryId()));
             product.setCategory(category);
         }
-        modelMapper.map(request, product);
-        if(request.getQuantity() != null){
-            product.setInStock(request.getQuantity() > 0);
-        }
-        Product updatedProduct = productRepository.save(product);
-        return modelMapper.map(updatedProduct, ProductResponse.class);
 
+        if (request.getVariants() != null) {
+            product.getVariants().clear();
+
+            for (ProductVariant variantRequest : request.getVariants()) {
+                ProductVariant newVariant = new ProductVariant();
+                newVariant.setColor(variantRequest.getColor());
+                newVariant.setSize(variantRequest.getSize());
+                newVariant.setQuantity(variantRequest.getQuantity());
+                String sku = (product.getTitle() + "-" + variantRequest.getColor() + "-" + variantRequest.getSize())
+                        .replaceAll("\\s+", "-").toUpperCase();
+                newVariant.setSku(sku);
+                newVariant.setProduct(product);
+                product.getVariants().add(newVariant);
+            }
+        }
+
+        Product updatedProduct = productRepository.save(product);
+        return mapProductToResponse(updatedProduct);
     }
+
 
     @Transactional
     @Override
@@ -148,6 +198,7 @@ public class ProductServiceImpl implements ProductService {
         return "Product with ID " + productId + " has been deleted successfully.";
     }
 
+
     @Override
     public Integer calculateDiscountPercentage(BigDecimal price, BigDecimal sellingPrice) {
         if (price == null || price.compareTo(BigDecimal.ZERO) == 0) {
@@ -163,19 +214,20 @@ public class ProductServiceImpl implements ProductService {
 
     @Transactional
     @Override
-    public ProductResponse updateProductStock(Long productId, Integer quantity, Principal principal) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+    public ProductResponse updateProductStock(Long variantId, UpdateStockRequest request, Principal principal) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", "id", variantId));
         String username = principal.getName();
         Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+        Product product = variant.getProduct();
         if (!product.getSeller().getId().equals(seller.getId())) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
-        product.setQuantity(quantity);
-        product.setInStock(quantity > 0);
-        Product updatedProduct = productRepository.save(product);
-        return modelMapper.map(updatedProduct, ProductResponse.class);
+        variant.setQuantity(request.getQuantity());
+        productVariantRepository.save(variant);
+        Product updatedProduct = productRepository.findById(product.getId()).get();
+        return mapProductToResponse(updatedProduct);
     }
 
     @Override

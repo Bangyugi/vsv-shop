@@ -32,7 +32,6 @@ public class PaymentController {
         return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
-    // Endpoint này sẽ xử lý callback từ VNPAY
     @GetMapping("/vnpay-callback")
     public ResponseEntity<Map<String, String>> vnpayCallback(HttpServletRequest request) {
         Map<String, String> response = paymentService.processVnpayCallback(request);
