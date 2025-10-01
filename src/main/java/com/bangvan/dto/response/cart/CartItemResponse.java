@@ -2,6 +2,7 @@ package com.bangvan.dto.response.cart;
 
 import com.bangvan.entity.Cart;
 import com.bangvan.entity.Product;
+import com.bangvan.entity.ProductVariant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,15 +17,9 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CartItemResponse {
-    Long id;
-
-    Product product;
-
-    String size;
-
-    Integer quantity;
-
-    BigDecimal price;
-
-    BigDecimal sellingPrice;
+    private Long id;
+    private ProductVariant variant;
+    private Integer quantity;
+    private BigDecimal price;
+    private BigDecimal sellingPrice;
 }

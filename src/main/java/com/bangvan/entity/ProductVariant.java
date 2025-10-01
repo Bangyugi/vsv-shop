@@ -4,34 +4,31 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import java.math.BigDecimal;
 
 @Entity
-@Table(name = "order_items")
+@Table(name = "product_variants")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class OrderItem {
+public class ProductVariant {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "order_id")
-    Order order;
+    @Column(unique = true)
+    String sku;
 
-    @ManyToOne
-    @JoinColumn(name = "variant_id")
-    ProductVariant variant;
+    String color;
+
+    String size;
 
     Integer quantity;
 
-    BigDecimal price;
-
-    BigDecimal sellingPrice;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
+    @JsonIgnore
+    Product product;
 }

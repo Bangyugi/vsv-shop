@@ -9,14 +9,13 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class CategoryRequest {
 
     @NotBlank(message = "Category name is required")
-    String name;
+    private String name;
 
-    Long parentCategoryId;
+    private Long parentCategoryId;
 
     @NotNull(message = "Category level is required")
-    Integer level;
+    private Integer level;
 }

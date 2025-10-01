@@ -5,7 +5,9 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "products")
@@ -20,28 +22,15 @@ public class Product extends AbstractEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(name = "title")
     String title;
-
-    @Column(name = "description")
     String description;
-
-    @Column(name = "price")
     BigDecimal price;
-
-    @Column(name = "selling_price")
     BigDecimal sellingPrice;
-
-    @Column(name = "discount_percent")
     Integer discountPercent;
 
-    @Column(name = "quantity")
-    Integer quantity;
-
-    @Column(name = "color")
-    String color;
-
     @ElementCollection
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "image_url")
     List<String> images = new ArrayList<>();
 
     Integer numRatings;
@@ -54,11 +43,13 @@ public class Product extends AbstractEntity {
     @JoinColumn(name = "seller_id")
     Seller seller;
 
-    String sizes;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    Set<ProductVariant> variants = new HashSet<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Review> reviews = new ArrayList<>();
 
-    Boolean inStock = true;
-
+    public int getTotalQuantity() {
+        return variants.stream().mapToInt(ProductVariant::getQuantity).sum();
+    }
 }

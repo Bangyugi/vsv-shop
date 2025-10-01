@@ -2,10 +2,7 @@ package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.cart.UpdateCartItemRequest;
 import com.bangvan.dto.response.cart.CartItemResponse;
-import com.bangvan.entity.Cart;
-import com.bangvan.entity.CartItem;
-import com.bangvan.entity.Product;
-import com.bangvan.entity.User;
+import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
@@ -65,11 +62,13 @@ public class CartItemServiceImpl implements CartItemService {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
 
-        Product product = cartItem.getProduct();
+        ProductVariant variant = cartItem.getVariant();
+        Product product = variant.getProduct();
         int requestedQuantity = request.getQuantity();
-        if (requestedQuantity > product.getQuantity()) {
+
+        if (requestedQuantity > variant.getQuantity()) {
             throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
-                    "Only " + product.getQuantity() + " items left in stock.");
+                    "Only " + variant.getQuantity() + " items left in stock for this variant.");
         }
 
         if (requestedQuantity <= 0) {

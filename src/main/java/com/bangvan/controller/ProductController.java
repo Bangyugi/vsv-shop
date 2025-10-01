@@ -2,6 +2,7 @@ package com.bangvan.controller;
 
 import com.bangvan.dto.request.product.CreateProductRequest;
 import com.bangvan.dto.request.product.UpdateProductRequest;
+import com.bangvan.dto.request.product.UpdateStockRequest;
 import com.bangvan.dto.response.ApiResponse;
 import com.bangvan.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -100,20 +101,21 @@ public class ProductController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @PatchMapping("/{productId}/stock")
+    @PatchMapping("/variants/{variantId}/stock")
     @PreAuthorize("hasRole('SELLER')")
-    @Operation(summary = "Update a product's stock", description = "Endpoint for sellers to update their own product's stock")
+    @Operation(summary = "Update a variant's stock", description = "Endpoint for sellers to update their own product variant's stock")
     public ResponseEntity<ApiResponse> updateProductStock(
-            @PathVariable Long productId,
-            @RequestParam Integer quantity,
+            @PathVariable Long variantId,
+            @Valid @RequestBody UpdateStockRequest request,
             Principal principal) {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.OK.value(),
                 "Product stock updated successfully",
-                productService.updateProductStock(productId, quantity, principal)
+                productService.updateProductStock(variantId, request, principal)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
+
 
     @GetMapping("/seller/{sellerId}")
     @Operation(summary = "Get products by seller ID", description = "Endpoint to fetch products by seller ID")

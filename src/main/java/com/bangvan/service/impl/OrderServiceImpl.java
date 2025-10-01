@@ -38,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemRepository orderItemRepository;
     private final SellerRepository sellerRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     @Transactional
     @Override
@@ -48,20 +49,19 @@ public class OrderServiceImpl implements OrderService {
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "user", username));
 
-        if(cart.getCartItems().isEmpty()){
+        if (cart.getCartItems().isEmpty()) {
             throw new AppException(ErrorCode.CART_EMPTY);
         }
+
         Address shippingAddress;
         if (request.getShippingAddress() != null) {
             Address newAddress = request.getShippingAddress();
             newAddress.setUser(user);
             shippingAddress = addressRepository.save(newAddress);
-        }
-        else if (request.getAddressId() != null) {
+        } else if (request.getAddressId() != null) {
             shippingAddress = addressRepository.findById(request.getAddressId())
                     .orElseThrow(() -> new ResourceNotFoundException("Address", "ID", request.getAddressId()));
-        }
-        else {
+        } else {
             shippingAddress = user.getAddresses().stream().findFirst()
                     .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
         }
@@ -77,30 +77,28 @@ public class OrderServiceImpl implements OrderService {
 
         List<OrderItem> orderItems = new ArrayList<>();
 
-
         for (CartItem cartItem : cart.getCartItems()) {
-            OrderItem orderItem = new OrderItem();
-
-            Product product = cartItem.getProduct();
-            if (product.getQuantity() < cartItem.getQuantity()) {
-                throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK);
+            ProductVariant variant = cartItem.getVariant();
+            int requestedQuantity = cartItem.getQuantity();
+            if (variant.getQuantity() < requestedQuantity) {
+                throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
+                        "Not enough stock for SKU " + variant.getSku() + ". Only " + variant.getQuantity() + " left.");
             }
 
-            product.setQuantity(product.getQuantity() - cartItem.getQuantity());
-            productRepository.save(product);
+            variant.setQuantity(variant.getQuantity() - requestedQuantity);
+            productVariantRepository.save(variant);
 
-            orderItem.setProduct(product);
-            orderItem.setQuantity(cartItem.getQuantity());
-            orderItem.setSize(cartItem.getSize());
+            OrderItem orderItem = new OrderItem();
+            orderItem.setVariant(variant);
+            orderItem.setQuantity(requestedQuantity);
             orderItem.setPrice(cartItem.getPrice());
             orderItem.setSellingPrice(cartItem.getSellingPrice());
             orderItem.setOrder(order);
             orderItems.add(orderItem);
         }
+
         order.setOrderItems(orderItems);
         Order savedOrder = orderRepository.save(order);
-
-
         cart.getCartItems().clear();
         cart.setTotalItem(0);
         cart.setTotalSellingPrice(null);
@@ -209,9 +207,9 @@ public class OrderServiceImpl implements OrderService {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
-
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "ID", orderId));
+
         if (!order.getUser().getId().equals(user.getId())) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
@@ -221,14 +219,14 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setOrderStatus(OrderStatus.CANCELLED);
+
+        for (OrderItem item : order.getOrderItems()) {
+            ProductVariant variant = item.getVariant();
+            variant.setQuantity(variant.getQuantity() + item.getQuantity());
+            productVariantRepository.save(variant);
+        }
+
         Order cancelledOrder = orderRepository.save(order);
-
-         for (OrderItem item : cancelledOrder.getOrderItems()) {
-             Product product = item.getProduct();
-             product.setQuantity(product.getQuantity() + item.getQuantity());
-             productRepository.save(product);
-         }
-
         return modelMapper.map(cancelledOrder, OrderResponse.class);
     }
 
