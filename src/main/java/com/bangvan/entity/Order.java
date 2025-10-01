@@ -40,14 +40,15 @@ public class Order {
     @JoinColumn(name = "shipping_address_id")
     Address shippingAddress;
 
-    @Embedded
-    PaymentDetails paymentDetails = new PaymentDetails();
-
     BigDecimal totalPrice;
 
-    BigDecimal totalSellingPrice;
+//    @Embedded
+//    PaymentDetails paymentDetails = new PaymentDetails();
 
-    Integer discountPercent;
+//
+//    BigDecimal totalSellingPrice;
+
+//    Integer discountPercent;
 
     @Enumerated(EnumType.STRING)
     OrderStatus orderStatus;

@@ -20,3 +20,14 @@ logging:
   level:
     root: info
     web: info
+
+
+payment:
+  vnpay:
+    url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+    tmnCode: DD7EOCBJ
+    secretKey: W6R0XYAF795RNFJMZYR73BK9S8RIZVB6
+    returnUrl: http://localhost:8080/api/payments/vnpay-callback
+    version: 2.1.0
+    command: pay
+    orderType: other

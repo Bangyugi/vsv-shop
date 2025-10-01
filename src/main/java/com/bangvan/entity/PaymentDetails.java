@@ -12,16 +12,15 @@ import lombok.experimental.FieldDefaults;
 @Embeddable
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PaymentDetails {
+    
 
-    String paymentId;
+    String paymentLinkId;
 
-    String razorpayPaymentLinkId;
+    String paymentLinkReferenceId;
 
-    String razorpayPaymentLinkReferenceId;
+    String paymentLinkStatus;
 
-    String razorpayPaymentLinkStatus;
-
-    String razorpayPaymentId​;
+    String paymentId​;
 
     PaymentStatus status;
 

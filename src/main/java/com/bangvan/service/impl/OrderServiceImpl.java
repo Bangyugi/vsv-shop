@@ -114,7 +114,7 @@ public class OrderServiceImpl implements OrderService {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
-        List<Order> orders = orderRepository.findByUserAndOrderStatus(user, OrderStatus.PENDING);
+        List<Order> orders = orderRepository.findByUserAndOrderStatusNotDelivered(user);
         return orders.stream()
                 .map(order -> modelMapper.map(order, OrderResponse.class))
                 .collect(Collectors.toList());
@@ -126,7 +126,7 @@ public class OrderServiceImpl implements OrderService {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
-        Page<Order> orderPage = orderRepository.findByUser(user, pageable);
+        Page<Order> orderPage = orderRepository.findByUserAndOrderStatus(user, OrderStatus.DELIVERED, pageable);
         List<OrderResponse> orderResponses = orderPage.getContent().stream()
                 .map(order -> modelMapper.map(order, OrderResponse.class))
                 .collect(Collectors.toList());

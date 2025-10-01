@@ -23,8 +23,8 @@ public class OrderResponse {
     private List<OrderItem> orderItems;
     private Address shippingAddress;
     private BigDecimal totalPrice;
-    private BigDecimal totalSellingPrice;
-    private Integer discountPercent;
+//    private BigDecimal totalSellingPrice;
+//    private Integer discountPercent;
     private OrderStatus orderStatus;
     private int totalItem;
     private LocalDateTime orderDate;

@@ -41,7 +41,9 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/verify/**",
             "/api/products/**",
-            "/api/categories/**"
+            "/api/categories/**",
+            "/api/webhooks/**",
+            "/api/payments/vnpay-callback"
 
     };
 
