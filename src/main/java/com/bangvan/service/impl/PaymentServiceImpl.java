@@ -2,9 +2,13 @@ package com.bangvan.service.impl;
 
 import com.bangvan.dto.response.payment.PaymentLinkResponse;
 import com.bangvan.entity.Order;
+import com.bangvan.entity.PaymentOrder;
+import com.bangvan.entity.SellerReport;
+import com.bangvan.entity.Transaction;
 import com.bangvan.exception.ResourceNotFoundException;
-import com.bangvan.repository.OrderRepository;
+import com.bangvan.repository.*;
 import com.bangvan.service.PaymentService;
+import com.bangvan.service.SellerReportService;
 import com.bangvan.utils.OrderStatus;
 import com.bangvan.utils.PaymentStatus;
 import com.bangvan.utils.VnpayUtil;
@@ -22,6 +26,11 @@ import java.util.*;
 public class PaymentServiceImpl implements PaymentService {
 
     private final OrderRepository orderRepository;
+    private final TransactionRepository transactionRepository;
+    private final SellerRepository sellerRepository;
+    private final SellerReportService sellerReportService;
+    private final SellerReportRepository sellerReportRepository;
+    private final PaymentOrderRepository paymentOrderRepository;
 
     @Value("${payment.vnpay.tmnCode}")
     private String tmnCode;
@@ -40,7 +49,7 @@ public class PaymentServiceImpl implements PaymentService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "ID", orderId));
 
-        long amount = order.getTotalPrice().longValue() * 100 ;
+        long amount = order.getTotalPrice().longValue() * 100;
         String vnp_TxnRef = order.getId().toString() + "_" + System.currentTimeMillis();
 
         Map<String, String> vnp_Params = new HashMap<>();
@@ -70,6 +79,13 @@ public class PaymentServiceImpl implements PaymentService {
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
 
         String paymentUrl = vnpayUrl + "?" + queryUrl;
+
+        PaymentOrder paymentOrder = order.getPaymentOrder();
+        if (paymentOrder != null) {
+            paymentOrder.setPaymentLink(paymentUrl);
+            paymentOrderRepository.save(paymentOrder);
+        }
+
         return new PaymentLinkResponse(paymentUrl);
     }
 
@@ -89,9 +105,8 @@ public class PaymentServiceImpl implements PaymentService {
         fields.remove("vnp_SecureHashType");
         fields.remove("vnp_SecureHash");
 
-        String signValue = VnpayUtil.getPaymentUrl(fields,true);
-        String vnp_SecureHash_New = VnpayUtil.hmacSHA512(hashSecret,signValue);
-
+        String signValue = VnpayUtil.getPaymentUrl(fields, true);
+        String vnp_SecureHash_New = VnpayUtil.hmacSHA512(hashSecret, signValue);
 
         if (vnp_SecureHash.equals(vnp_SecureHash_New)) {
             String orderInfo = request.getParameter("vnp_TxnRef");
@@ -102,11 +117,34 @@ public class PaymentServiceImpl implements PaymentService {
             Order order = orderRepository.findById(orderId)
                     .orElseThrow(() -> new ResourceNotFoundException("Order", "ID", orderId));
 
+            PaymentOrder paymentOrder = order.getPaymentOrder();
+
             if ("00".equals(responseCode)) {
                 order.setPaymentStatus(PaymentStatus.COMPLETED);
                 order.setOrderStatus(OrderStatus.PLACED);
+                if (paymentOrder != null) {
+                    paymentOrder.setStatus(PaymentStatus.COMPLETED);
+                }
+                Transaction transaction = new Transaction();
+                transaction.setOrder(order);
+                transactionRepository.save(transaction);
+                SellerReport sellerReport = sellerReportRepository.findBySellerId(order.getSeller().getId())
+                        .orElse(new SellerReport());
+                sellerReport.setSeller(order.getSeller());
+                sellerReport.setTotalEarnings(sellerReport.getTotalEarnings().add(order.getTotalPrice()));
+                sellerReport.setTotalSales(sellerReport.getTotalSales().add(order.getTotalPrice()));
+                sellerReport.setNetEarnings(sellerReport.getNetEarnings().add(order.getTotalPrice()));
+                sellerReport.setTotalOrders(sellerReport.getTotalOrders() + 1);
+                sellerReportRepository.save(sellerReport);
+
             } else {
                 order.setPaymentStatus(PaymentStatus.FAILED);
+                if (paymentOrder != null) {
+                    paymentOrder.setStatus(PaymentStatus.FAILED);
+                }
+            }
+            if (paymentOrder != null) {
+                paymentOrderRepository.save(paymentOrder);
             }
             orderRepository.save(order);
             return Map.of("RspCode", "00", "Message", "success");

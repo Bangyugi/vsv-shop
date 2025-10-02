@@ -13,6 +13,7 @@ import com.bangvan.exception.ResourceNotFoundException;
 import com.bangvan.repository.*;
 import com.bangvan.service.OrderService;
 import com.bangvan.utils.OrderStatus;
+import com.bangvan.utils.PaymentMethod;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -41,6 +42,7 @@ public class OrderServiceImpl implements OrderService {
     private final ModelMapper modelMapper;
     private final SellerRepository sellerRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final PaymentOrderRepository paymentOrderRepository;
 
     private OrderResponse mapOrderToOrderResponse(Order order) {
         OrderResponse orderResponse = modelMapper.map(order, OrderResponse.class);
@@ -124,11 +126,15 @@ public class OrderServiceImpl implements OrderService {
                 totalPriceForSeller = totalPriceForSeller.add(cartItem.getSellingPrice());
                 totalItemForSeller += requestedQuantity;
             }
-
             order.setTotalPrice(totalPriceForSeller);
             order.setTotalItem(totalItemForSeller);
             order.setOrderItems(orderItems);
-
+            PaymentOrder paymentOrder = new PaymentOrder();
+            paymentOrder.setAmount(totalPriceForSeller);
+            paymentOrder.setPaymentMethod(PaymentMethod.VNPAY);
+            paymentOrder.setUser(user);
+            paymentOrder = paymentOrderRepository.save(paymentOrder);
+            order.setPaymentOrder(paymentOrder);
             Order savedOrder = orderRepository.save(order);
             newOrders.add(savedOrder);
         }

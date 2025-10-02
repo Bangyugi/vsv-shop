@@ -30,7 +30,8 @@ public class PaymentOrder {
     @Enumerated(EnumType.STRING)
     PaymentMethod paymentMethod;
 
-    String paymentLinkId;
+    @Column(columnDefinition = "TEXT")
+    String paymentLink;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
