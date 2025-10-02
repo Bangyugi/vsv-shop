@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 @Setter
 public class OrderItemResponse {
     private Long id;
+    private Product product;
     private ProductVariant variant;
     private Integer quantity;
     private BigDecimal price;

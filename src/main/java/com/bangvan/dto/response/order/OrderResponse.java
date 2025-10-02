@@ -20,13 +20,11 @@ public class OrderResponse {
     private Long id;
     private String orderId;
     private User user;
-    private List<OrderItem> orderItems;
     private Address shippingAddress;
     private BigDecimal totalPrice;
-//    private BigDecimal totalSellingPrice;
-//    private Integer discountPercent;
     private OrderStatus orderStatus;
     private int totalItem;
     private LocalDateTime orderDate;
     private LocalDateTime deliverDate;
+    private List<OrderItemResponse> orderItems;
 }

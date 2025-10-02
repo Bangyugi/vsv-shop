@@ -13,9 +13,9 @@ import java.util.Set;
 public class CartResponse {
     private Long id;
     private User user;
-    private Set<CartItem> cartItems;
     private BigDecimal totalSellingPrice;
     private Integer totalItem;
     private BigDecimal discount;
     private String couponCode;
+    private Set<CartItemResponse> cartItems;
 }

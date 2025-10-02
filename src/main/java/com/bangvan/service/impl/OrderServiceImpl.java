@@ -3,7 +3,9 @@ package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.order.CreateOrderRequest;
 import com.bangvan.dto.response.PageCustomResponse;
+import com.bangvan.dto.response.order.OrderItemResponse;
 import com.bangvan.dto.response.order.OrderResponse;
+import com.bangvan.dto.response.product.ProductResponse;
 import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
@@ -19,10 +21,12 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -35,14 +39,25 @@ public class OrderServiceImpl implements OrderService {
     private final AddressRepository addressRepository;
     private final CartRepository cartRepository;
     private final ModelMapper modelMapper;
-    private final OrderItemRepository orderItemRepository;
     private final SellerRepository sellerRepository;
-    private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+
+    private OrderResponse mapOrderToOrderResponse(Order order) {
+        OrderResponse orderResponse = modelMapper.map(order, OrderResponse.class);
+        List<OrderItemResponse> orderItemResponses = order.getOrderItems().stream()
+                .map(orderItem -> {
+                    OrderItemResponse orderItemResponse = modelMapper.map(orderItem, OrderItemResponse.class);
+                    orderItemResponse.setProduct(orderItem.getVariant().getProduct());
+                    return orderItemResponse;
+                })
+                .collect(Collectors.toList());
+        orderResponse.setOrderItems(orderItemResponses);
+        return orderResponse;
+    }
 
     @Transactional
     @Override
-    public OrderResponse createOrder(CreateOrderRequest request, Principal principal) {
+    public List<OrderResponse> createOrder(CreateOrderRequest request, Principal principal) {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
@@ -66,45 +81,66 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
         }
 
-        Order order = new Order();
-        order.setUser(user);
-        order.setShippingAddress(shippingAddress);
-        order.setOrderId(UUID.randomUUID().toString());
-        order.setOrderDate(LocalDateTime.now());
-        order.setOrderStatus(OrderStatus.PENDING);
-        order.setTotalPrice(cart.getTotalSellingPrice());
-        order.setTotalItem(cart.getTotalItem());
+        Map<Seller, List<CartItem>> itemsBySeller = cart.getCartItems().stream()
+                .collect(Collectors.groupingBy(cartItem -> cartItem.getVariant().getProduct().getSeller()));
 
-        List<OrderItem> orderItems = new ArrayList<>();
+        List<Order> newOrders = new ArrayList<>();
 
-        for (CartItem cartItem : cart.getCartItems()) {
-            ProductVariant variant = cartItem.getVariant();
-            int requestedQuantity = cartItem.getQuantity();
-            if (variant.getQuantity() < requestedQuantity) {
-                throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
-                        "Not enough stock for SKU " + variant.getSku() + ". Only " + variant.getQuantity() + " left.");
+        for (Map.Entry<Seller, List<CartItem>> entry : itemsBySeller.entrySet()) {
+            Seller seller = entry.getKey();
+            List<CartItem> sellerCartItems = entry.getValue();
+
+            Order order = new Order();
+            order.setUser(user);
+            order.setSeller(seller);
+            order.setShippingAddress(shippingAddress);
+            order.setOrderId(UUID.randomUUID().toString());
+            order.setOrderDate(LocalDateTime.now());
+            order.setOrderStatus(OrderStatus.PENDING);
+
+            List<OrderItem> orderItems = new ArrayList<>();
+            BigDecimal totalPriceForSeller = BigDecimal.ZERO;
+            int totalItemForSeller = 0;
+
+            for (CartItem cartItem : sellerCartItems) {
+                ProductVariant variant = cartItem.getVariant();
+                int requestedQuantity = cartItem.getQuantity();
+                if (variant.getQuantity() < requestedQuantity) {
+                    throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK,
+                            "Not enough stock for SKU " + variant.getSku() + ". Only " + variant.getQuantity() + " left.");
+                }
+
+                variant.setQuantity(variant.getQuantity() - requestedQuantity);
+                productVariantRepository.save(variant);
+
+                OrderItem orderItem = new OrderItem();
+                orderItem.setVariant(variant);
+                orderItem.setQuantity(requestedQuantity);
+                orderItem.setPrice(cartItem.getPrice());
+                orderItem.setSellingPrice(cartItem.getSellingPrice());
+                orderItem.setOrder(order);
+                orderItems.add(orderItem);
+
+                totalPriceForSeller = totalPriceForSeller.add(cartItem.getSellingPrice());
+                totalItemForSeller += requestedQuantity;
             }
 
-            variant.setQuantity(variant.getQuantity() - requestedQuantity);
-            productVariantRepository.save(variant);
+            order.setTotalPrice(totalPriceForSeller);
+            order.setTotalItem(totalItemForSeller);
+            order.setOrderItems(orderItems);
 
-            OrderItem orderItem = new OrderItem();
-            orderItem.setVariant(variant);
-            orderItem.setQuantity(requestedQuantity);
-            orderItem.setPrice(cartItem.getPrice());
-            orderItem.setSellingPrice(cartItem.getSellingPrice());
-            orderItem.setOrder(order);
-            orderItems.add(orderItem);
+            Order savedOrder = orderRepository.save(order);
+            newOrders.add(savedOrder);
         }
 
-        order.setOrderItems(orderItems);
-        Order savedOrder = orderRepository.save(order);
         cart.getCartItems().clear();
         cart.setTotalItem(0);
         cart.setTotalSellingPrice(null);
         cartRepository.save(cart);
 
-        return modelMapper.map(savedOrder, OrderResponse.class);
+        return newOrders.stream()
+                .map(this::mapOrderToOrderResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -114,7 +150,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
         List<Order> orders = orderRepository.findByUserAndOrderStatusNotDelivered(user);
         return orders.stream()
-                .map(order -> modelMapper.map(order, OrderResponse.class))
+                .map(order -> mapOrderToOrderResponse(order))
                 .collect(Collectors.toList());
     }
 
@@ -126,7 +162,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
         Page<Order> orderPage = orderRepository.findByUserAndOrderStatus(user, OrderStatus.DELIVERED, pageable);
         List<OrderResponse> orderResponses = orderPage.getContent().stream()
-                .map(order -> modelMapper.map(order, OrderResponse.class))
+                .map(order -> mapOrderToOrderResponse(order))
                 .collect(Collectors.toList());
         return PageCustomResponse.<OrderResponse>builder()
                 .pageNo(orderPage.getNumber() + 1)
@@ -146,7 +182,7 @@ public class OrderServiceImpl implements OrderService {
         Page<Order> orderPage = orderRepository.findBySeller(seller, pageable);
 
         List<OrderResponse> orderResponses = orderPage.getContent().stream()
-                .map(order -> modelMapper.map(order, OrderResponse.class))
+                .map(order -> mapOrderToOrderResponse(order))
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<OrderResponse>builder()
@@ -189,7 +225,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order updatedOrder = orderRepository.save(order);
-        return modelMapper.map(updatedOrder, OrderResponse.class);
+        return mapOrderToOrderResponse(updatedOrder);
     }
 
     @Transactional
@@ -227,7 +263,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order cancelledOrder = orderRepository.save(order);
-        return modelMapper.map(cancelledOrder, OrderResponse.class);
+        return mapOrderToOrderResponse(cancelledOrder);
     }
 
 
