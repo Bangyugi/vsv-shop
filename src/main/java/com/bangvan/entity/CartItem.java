@@ -28,7 +28,6 @@ public class CartItem {
     @JoinColumn(name = "variant_id")
     ProductVariant variant;
 
-
     Integer quantity = 1;
 
     BigDecimal price;

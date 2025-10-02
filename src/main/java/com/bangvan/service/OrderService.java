@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface OrderService {
     @Transactional
-    OrderResponse createOrder(CreateOrderRequest request, Principal principal);
+    List<OrderResponse>  createOrder(CreateOrderRequest request, Principal principal);
 
     List<OrderResponse> findOrderByUser(Principal principal);
 

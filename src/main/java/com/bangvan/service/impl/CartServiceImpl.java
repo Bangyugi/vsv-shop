@@ -1,7 +1,9 @@
 package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.cart.AddItemToCartRequest;
+import com.bangvan.dto.response.cart.CartItemResponse;
 import com.bangvan.dto.response.cart.CartResponse;
+import com.bangvan.dto.response.product.ProductResponse;
 import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
@@ -17,6 +19,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.Principal;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +31,19 @@ public class CartServiceImpl implements CartService {
     private final ModelMapper modelMapper;
     private final ProductVariantRepository productVariantRepository; // Sử dụng repository mới
     private final CartItemRepository cartItemRepository;
+
+    private CartResponse mapCartToCartResponse(Cart cart) {
+        CartResponse cartResponse = modelMapper.map(cart, CartResponse.class);
+        Set<CartItemResponse> cartItemResponses = cart.getCartItems().stream()
+                .map(cartItem -> {
+                    CartItemResponse cartItemResponse = modelMapper.map(cartItem, CartItemResponse.class);
+                    cartItemResponse.setProduct(cartItem.getVariant().getProduct());
+                    return cartItemResponse;
+                })
+                .collect(Collectors.toSet());
+        cartResponse.setCartItems(cartItemResponses);
+        return cartResponse;
+    }
 
     @Transactional
     @Override
@@ -71,7 +88,7 @@ public class CartServiceImpl implements CartService {
 
         updateCartTotals(cart);
 
-        return modelMapper.map(cart, CartResponse.class);
+        return mapCartToCartResponse(cart);
     }
 
 
@@ -109,8 +126,7 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "user", username));
 
         updateCartTotals(cart);
-
-        return modelMapper.map(cart, CartResponse.class);
+        return mapCartToCartResponse(cart);
     }
 
     private BigDecimal calculateDiscountPercentage(BigDecimal totalPrice, BigDecimal totalDiscountedPrice) {
@@ -123,4 +139,6 @@ public class CartServiceImpl implements CartService {
         return discount.multiply(new BigDecimal("100"))
                 .divide(totalPrice, 2, RoundingMode.HALF_UP);
     }
+
+
 }

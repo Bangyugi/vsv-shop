@@ -27,7 +27,7 @@ public class ProductVariant {
 
     Integer quantity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id")
     @JsonIgnore
     Product product;

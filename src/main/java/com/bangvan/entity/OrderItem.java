@@ -28,6 +28,7 @@ public class OrderItem {
     @JoinColumn(name = "variant_id")
     ProductVariant variant;
 
+
     Integer quantity;
 
     BigDecimal price;

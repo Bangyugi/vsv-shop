@@ -1,8 +1,5 @@
 package com.bangvan.service.impl;
 
-import com.bangvan.service.OrderItemService;
-import org.springframework.stereotype.Service;
-
 import com.bangvan.dto.response.order.OrderItemResponse;
 import com.bangvan.entity.OrderItem;
 import com.bangvan.entity.User;
@@ -11,8 +8,10 @@ import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
 import com.bangvan.repository.OrderItemRepository;
 import com.bangvan.repository.UserRepository;
+import com.bangvan.service.OrderItemService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
 
 import java.security.Principal;
 
@@ -36,6 +35,12 @@ public class OrderItemServiceImpl implements OrderItemService {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
 
-        return modelMapper.map(orderItem, OrderItemResponse.class);
+        return mapOrderItemToResponse(orderItem);
+    }
+
+    private OrderItemResponse mapOrderItemToResponse(OrderItem orderItem) {
+        OrderItemResponse orderItemResponse = modelMapper.map(orderItem, OrderItemResponse.class);
+        orderItemResponse.setProduct(orderItem.getVariant().getProduct());
+        return orderItemResponse;
     }
 }

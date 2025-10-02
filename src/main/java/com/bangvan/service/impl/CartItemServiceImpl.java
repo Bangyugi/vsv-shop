@@ -2,6 +2,7 @@ package com.bangvan.service.impl;
 
 import com.bangvan.dto.request.cart.UpdateCartItemRequest;
 import com.bangvan.dto.response.cart.CartItemResponse;
+import com.bangvan.dto.response.product.ProductResponse;
 import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
@@ -27,6 +28,13 @@ public class CartItemServiceImpl implements CartItemService {
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
     private final ModelMapper modelMapper;
+
+    private CartItemResponse mapCartItemToResponse(CartItem cartItem) {
+        CartItemResponse cartItemResponse = modelMapper.map(cartItem, CartItemResponse.class);
+        cartItemResponse.setProduct(cartItem.getVariant().getProduct());
+
+        return cartItemResponse;
+    }
 
     @Transactional
     @Override
@@ -83,7 +91,7 @@ public class CartItemServiceImpl implements CartItemService {
 
         updateCartTotals(cart);
 
-        return modelMapper.map(cartItem, CartItemResponse.class);
+        return mapCartItemToResponse(cartItem);
     }
 
 
@@ -123,7 +131,7 @@ public class CartItemServiceImpl implements CartItemService {
     public CartItemResponse findCartItemById(Long cartItemId) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("CartItem", "ID", cartItemId));
-        return modelMapper.map(cartItem, CartItemResponse.class);
+        return mapCartItemToResponse(cartItem);
     }
 
 }

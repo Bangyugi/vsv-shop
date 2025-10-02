@@ -1,5 +1,6 @@
 package com.bangvan.dto.response.cart;
 
+import com.bangvan.dto.response.product.ProductResponse;
 import com.bangvan.entity.Cart;
 import com.bangvan.entity.Product;
 import com.bangvan.entity.ProductVariant;
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class CartItemResponse {
     private Long id;
+    private Product product;
     private ProductVariant variant;
     private Integer quantity;
     private BigDecimal price;
