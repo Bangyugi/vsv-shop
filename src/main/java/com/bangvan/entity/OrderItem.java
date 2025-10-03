@@ -28,11 +28,16 @@ public class OrderItem {
     @JoinColumn(name = "variant_id")
     ProductVariant variant;
 
+    String productTitle;
+    String variantSku;
+    String color;
+    String size;
+    String imageUrl;
 
     Integer quantity;
 
-    BigDecimal price;
+    BigDecimal priceAtPurchase;
 
-    BigDecimal sellingPrice;
+    BigDecimal sellingPriceAtPurchase;
 
 }

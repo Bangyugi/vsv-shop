@@ -31,7 +31,7 @@ public class Order {
 
     @ManyToOne
     @JoinColumn(name = "seller_id")
-    private Seller seller;
+    Seller seller;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     List<OrderItem> orderItems = new ArrayList<>();
@@ -53,7 +53,7 @@ public class Order {
     @Enumerated(EnumType.STRING)
     OrderStatus orderStatus;
 
-    int totalItem;
+    Integer totalItem;
 
     @Enumerated(EnumType.STRING)
     PaymentStatus paymentStatus = PaymentStatus.PENDING;
@@ -64,6 +64,6 @@ public class Order {
 
     @ManyToOne
     @JoinColumn(name = "payment_order_id")
-    private PaymentOrder paymentOrder;
+    PaymentOrder paymentOrder;
 
 }
