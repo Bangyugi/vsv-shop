@@ -45,6 +45,7 @@ VALUES (1, '123 Đường ABC', 'Phường XYZ', 'Quận 1', 'Thành phố Hồ 
        (3, '789 Đường XYZ', 'Phường OPQ', 'Quận 3', 'Thành phố Hồ Chí Minh', 'Việt Nam', 2),
        (4, '101 Đường GHI', 'Phường JKL', 'Quận 4', 'Thành phố Hồ Chí Minh', 'Việt Nam', 4);
 
+SELECT setval('addresses_id_seq', (SELECT MAX(id) FROM addresses));
 -- =================================================================
 -- BẢNG SELLERS
 -- Thêm người bán tương ứng với user có id = 3
@@ -134,4 +135,17 @@ VALUES
     (10, 'DM001-HOATTIET-S', 'Họa tiết', 'S', 20);
 
 
-SELECT setval('addresses_id_seq', (SELECT MAX(id) FROM addresses));
+
+
+INSERT INTO coupons (code, discount_percentage, start_date, end_date, min_order_value, is_active)
+VALUES
+    -- Mã còn hiệu lực, không yêu cầu giá trị tối thiểu
+    ('GIAM10', 10.00, CURRENT_DATE - INTERVAL '1 day', CURRENT_DATE + INTERVAL '7 day', 0, TRUE),
+    -- Mã đã hết hạn
+    ('SALEHETHAN', 20.00, '2023-01-01', '2023-01-31', 0, TRUE),
+    -- Mã chưa có hiệu lực
+    ('SAPTOI', 15.00, CURRENT_DATE + INTERVAL '7 day', CURRENT_DATE + INTERVAL '14 day', 0, TRUE),
+    -- Mã yêu cầu giá trị đơn hàng tối thiểu 500k
+    ('GIAM50K', 10.00, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 day', 500000, TRUE),
+    -- Mã không hoạt động
+    ('KHOA', 50.00, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 day', 0, FALSE);

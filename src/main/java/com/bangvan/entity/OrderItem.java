@@ -33,11 +33,8 @@ public class OrderItem {
     String color;
     String size;
     String imageUrl;
-
     Integer quantity;
-
     BigDecimal priceAtPurchase;
-
     BigDecimal sellingPriceAtPurchase;
 
 }
