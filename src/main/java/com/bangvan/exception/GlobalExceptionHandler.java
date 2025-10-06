@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ApiResponse> handleAppException(AppException exception, WebRequest webRequest){
-        ApiResponse apiResponse = ApiResponse.error(exception.getErrorCode().getCode(), exception.getErrorCode().getMessage());
+        ApiResponse apiResponse = ApiResponse.error(exception.getErrorCode().getCode(), exception.getMessage());
         webRequest.getDescription(false);
         return new ResponseEntity<>(apiResponse,exception.getErrorCode().getStatus());
     }
