@@ -1,7 +1,7 @@
 package com.bangvan.controller;
 
 
-import com.bangvan.dto.request.product.CategoryRequest;
+import com.bangvan.dto.request.category.HomeCategoryRequest;
 import com.bangvan.dto.response.ApiResponse;
 import com.bangvan.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +24,7 @@ public class CategoryController {
     @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @PostMapping
     @Operation(summary = "Create a new category", description = "Endpoint for admins to create a new product category.")
-    public ResponseEntity<ApiResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
+    public ResponseEntity<ApiResponse> createCategory(@Valid @RequestBody HomeCategoryRequest.CategoryRequest request) {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.CREATED.value(),
                 "Category created successfully",
@@ -58,7 +58,7 @@ public class CategoryController {
     @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @PutMapping("/{categoryId}")
     @Operation(summary = "Update a category", description = "Endpoint for admins to update an existing product category.")
-    public ResponseEntity<ApiResponse> updateCategory(@PathVariable Long categoryId, @Valid @RequestBody CategoryRequest request) {
+    public ResponseEntity<ApiResponse> updateCategory(@PathVariable Long categoryId, @Valid @RequestBody HomeCategoryRequest.CategoryRequest request) {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.OK.value(),
                 "Category updated successfully",

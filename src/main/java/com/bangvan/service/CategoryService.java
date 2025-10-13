@@ -1,8 +1,8 @@
 package com.bangvan.service;
 
 
-import com.bangvan.dto.request.product.CategoryRequest;
-import com.bangvan.dto.response.product.CategoryResponse;
+import com.bangvan.dto.request.category.HomeCategoryRequest;
+import com.bangvan.dto.response.category.CategoryResponse;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -10,14 +10,14 @@ import java.util.List;
 public interface CategoryService {
 
     @Transactional
-    CategoryResponse createCategory(CategoryRequest request);
+    CategoryResponse createCategory(HomeCategoryRequest.CategoryRequest request);
 
     CategoryResponse getCategoryById(Long categoryId);
 
     List<CategoryResponse> getAllCategories();
 
     @Transactional
-    CategoryResponse updateCategory(Long categoryId, CategoryRequest request);
+    CategoryResponse updateCategory(Long categoryId, HomeCategoryRequest.CategoryRequest request);
 
     @Transactional
     String deleteCategory(Long categoryId);
