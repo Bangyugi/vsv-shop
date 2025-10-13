@@ -1,4 +1,4 @@
-package com.bangvan.dto.response.product;
+package com.bangvan.dto.response.category;
 
 import lombok.Getter;
 import lombok.Setter;

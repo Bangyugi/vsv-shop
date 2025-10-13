@@ -1,7 +1,7 @@
 package com.bangvan.service.impl;
 
-import com.bangvan.dto.request.product.CategoryRequest;
-import com.bangvan.dto.response.product.CategoryResponse;
+import com.bangvan.dto.request.category.HomeCategoryRequest;
+import com.bangvan.dto.response.category.CategoryResponse;
 import com.bangvan.entity.Category;
 import com.bangvan.exception.ResourceNotFoundException;
 import com.bangvan.repository.CategoryRepository;
@@ -24,7 +24,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Transactional
     @Override
-    public CategoryResponse createCategory(CategoryRequest request) {
+    public CategoryResponse createCategory(HomeCategoryRequest.CategoryRequest request) {
         Category category = new Category();
         category.setName(request.getName());
         category.setLevel(request.getLevel());
@@ -56,7 +56,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Transactional
     @Override
-    public CategoryResponse updateCategory(Long categoryId, CategoryRequest request) {
+    public CategoryResponse updateCategory(Long categoryId, HomeCategoryRequest.CategoryRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
 
