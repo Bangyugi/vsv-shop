@@ -15,7 +15,7 @@ public interface UserService {
     UserResponse createUser(CreateUserRequest request);
 
     @Transactional(rollbackFor = Exception.class)
-    UserResponse updateUser(Long userId, UpdateProfileRequest request);
+    UserResponse updateUser(Principal principal, UpdateProfileRequest request);
 
     String deleteUser(Long userId);
 

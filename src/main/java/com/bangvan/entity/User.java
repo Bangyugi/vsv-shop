@@ -57,7 +57,7 @@ public class User extends  AbstractEntity implements UserDetails {
     Gender gender;
 
     @Column(name = "enabled")
-    Boolean enabled = true;
+    Boolean enabled = false;
 
     @Column(name="birth_date")
     LocalDate birthDate ;

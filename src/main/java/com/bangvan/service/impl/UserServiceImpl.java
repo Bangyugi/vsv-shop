@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,29 +70,28 @@ public class UserServiceImpl implements UserService {
         log.info("Saving user to database");
         return modelMapper.map(user, UserResponse.class);
     }
-
     @Transactional(rollbackFor = Exception.class)
     @Override
-    public UserResponse updateUser(Long userId, UpdateProfileRequest request){
-        log.info("Updating user with ID: {}", userId);
+    public UserResponse updateUser(Principal principal, UpdateProfileRequest request){
+        String currentUsername = principal.getName();
+        log.info("Updating profile for user: {}", currentUsername);
 
-        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", currentUsername));
 
-        if (userRepository.existsByEmailAndIdNot(request.getEmail(), userId)) {
+        if (request.getEmail() != null && !request.getEmail().equals(currentUser.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
-        if (userRepository.existsByPhoneAndIdNot(request.getPhone(), userId)) {
+        if (request.getPhone() != null && !request.getPhone().equals(currentUser.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
             throw new AppException(ErrorCode.PHONE_EXISTED);
         }
 
+        modelMapper.map(request, currentUser);
 
-        modelMapper.map(request, user);
-
-        log.info("Updating user to database");
-        user= userRepository.save(user);
-        return modelMapper.map(user, UserResponse.class);
+        log.info("Saving updated user to database");
+        User updatedUser = userRepository.save(currentUser);
+        return modelMapper.map(updatedUser, UserResponse.class);
     }
-
     @Override
     public String deleteUser(Long userId){
         User user = userRepository.findByIdAndEnabledIsTrue(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
