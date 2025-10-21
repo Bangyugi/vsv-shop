@@ -39,10 +39,11 @@ public class UserController {
         return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Update User", description = "Update User")
-    @PutMapping("/update/{userId}")
-    public ResponseEntity<ApiResponse> updateUser(@PathVariable Long userId, @Valid @RequestBody UpdateProfileRequest request){
-        ApiResponse apiResponse = ApiResponse.success(200, "User updated successfully", userService.updateUser(userId, request));
+    @Operation(summary = "Update Current User Profile", description = "Update the profile of the currently logged-in user.")
+    @PutMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse> updateMyProfile(Principal principal, @Valid @RequestBody UpdateProfileRequest request){
+        ApiResponse apiResponse = ApiResponse.success(200, "User profile updated successfully", userService.updateUser(principal, request));
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 

@@ -20,12 +20,12 @@ public class VerificationCodeController {
 
     private final VerificationCodeService verificationCodeService;
 
-    @Operation(summary = "Send Verification Code", description = "Send Verification Code")
-    @PostMapping("/send")
-    public ResponseEntity<ApiResponse> sendVerificationCode(@RequestParam(name = "email") String email){
-        verificationCodeService.sendVerificationOtpEmail(email);
-        return ResponseEntity.ok(ApiResponse.success(200, "Verification code sent successfully", null));
-    }
+//    @Operation(summary = "Send Verification Code", description = "Send Verification Code")
+//    @PostMapping("/send")
+//    public ResponseEntity<ApiResponse> sendVerificationCode(@RequestParam(name = "email") String email){
+//        verificationCodeService.generateAndSendVerificationOtp(user);
+//        return ResponseEntity.ok(ApiResponse.success(200, "Verification code sent successfully", null));
+//    }
 
     @Operation(summary = "Verify Verification Code", description = "Verify Verification Code")
     @PostMapping()

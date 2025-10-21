@@ -1,4 +1,6 @@
 spring:
+  main:
+    allow-bean-definition-overriding: true
   config:
     activate:
       on-profile: dev
@@ -16,7 +18,7 @@ spring:
           time_zone: Asia/Ho_Chi_Minh
     show-sql: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     defer-datasource-initialization: true
   sql:
     init:
@@ -25,7 +27,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: bangtranvan08@gmail.com
-    password: lpttjytcptdvbocx
+    password: iduxkbxshjdojtjr
     properties:
       mail:
         smtp:
@@ -58,3 +60,5 @@ app:
     port: 6379
     host: localhost
     password: 5zm7aa8o
+  otp:
+    expiration-minutes: 15
