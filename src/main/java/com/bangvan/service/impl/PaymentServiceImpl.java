@@ -121,7 +121,7 @@ public class PaymentServiceImpl implements PaymentService {
 
             if ("00".equals(responseCode)) {
                 order.setPaymentStatus(PaymentStatus.COMPLETED);
-                order.setOrderStatus(OrderStatus.PLACED);
+                order.setOrderStatus(OrderStatus.PROCESSING);
                 if (paymentOrder != null) {
                     paymentOrder.setStatus(PaymentStatus.COMPLETED);
                 }

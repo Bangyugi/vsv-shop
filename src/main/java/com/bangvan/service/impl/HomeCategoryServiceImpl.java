@@ -1,6 +1,6 @@
 package com.bangvan.service.impl;
 
-import com.bangvan.dto.request.category.HomeCategoryRequest;
+import com.bangvan.dto.request.category.CategoryRequest;
 import com.bangvan.dto.response.category.HomeCategoryResponse;
 import com.bangvan.entity.HomeCategory;
 import com.bangvan.exception.ResourceNotFoundException;
@@ -20,7 +20,7 @@ public class HomeCategoryServiceImpl implements HomeCategoryService {
     private final ModelMapper modelMapper;
 
     @Override
-    public HomeCategoryResponse createHomeCategory(HomeCategoryRequest request) {
+    public HomeCategoryResponse createHomeCategory(CategoryRequest request) {
         HomeCategory homeCategory = modelMapper.map(request, HomeCategory.class);
         HomeCategory savedHomeCategory = homeCategoryRepository.save(homeCategory);
         return modelMapper.map(savedHomeCategory, HomeCategoryResponse.class);
@@ -41,7 +41,7 @@ public class HomeCategoryServiceImpl implements HomeCategoryService {
     }
 
     @Override
-    public HomeCategoryResponse updateHomeCategory(Long id, HomeCategoryRequest request) {
+    public HomeCategoryResponse updateHomeCategory(Long id, CategoryRequest request) {
         HomeCategory homeCategory = homeCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("HomeCategory", "id", id));
         modelMapper.map(request, homeCategory);

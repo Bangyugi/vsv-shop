@@ -4,6 +4,9 @@ import com.bangvan.entity.User;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -13,9 +16,10 @@ import java.util.Set;
 public class CartResponse {
     private Long id;
     private User user;
+    private BigDecimal totalPrice;
     private BigDecimal totalSellingPrice;
     private Integer totalItem;
     private BigDecimal discount;
     private String couponCode;
-    private Set<CartItemResponse> cartItems;
+    private List<CartItemResponse> cartItems = new ArrayList<>();
 }

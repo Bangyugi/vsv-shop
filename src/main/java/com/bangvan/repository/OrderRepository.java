@@ -11,12 +11,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByUser(User user, Pageable pageable);
 
-
+    Optional<Order> findByOrderId(String orderId);
 
     Page<Order> findBySeller(Seller seller, Pageable pageable);
 

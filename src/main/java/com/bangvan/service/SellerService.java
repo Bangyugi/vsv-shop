@@ -4,6 +4,7 @@ import com.bangvan.dto.request.seller.BecomeSellerRequest;
 import com.bangvan.dto.request.seller.UpdateSellerRequest;
 import com.bangvan.dto.response.PageCustomResponse;
 import com.bangvan.dto.response.seller.SellerResponse;
+import com.bangvan.dto.response.seller.UpdateSellerStatusRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,4 +24,10 @@ public interface SellerService {
     String deleteSeller(Principal principal);
 
     PageCustomResponse<SellerResponse> getAllSellers(Pageable pageable);
+
+    @Transactional(readOnly = true)
+    SellerResponse findSellerById(Long sellerId);
+
+    @Transactional
+    SellerResponse updateSellerStatus(Long sellerId, UpdateSellerStatusRequest request);
 }

@@ -1,7 +1,7 @@
 package com.bangvan.controller;
 
 
-import com.bangvan.dto.request.category.HomeCategoryRequest;
+import com.bangvan.dto.request.category.CategoryRequest;
 import com.bangvan.dto.response.ApiResponse;
 import com.bangvan.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +24,7 @@ public class CategoryController {
     @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @PostMapping
     @Operation(summary = "Create a new category", description = "Endpoint for admins to create a new product category.")
-    public ResponseEntity<ApiResponse> createCategory(@Valid @RequestBody HomeCategoryRequest.CategoryRequest request) {
+    public ResponseEntity<ApiResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.CREATED.value(),
                 "Category created successfully",
@@ -55,10 +55,10 @@ public class CategoryController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{categoryId}")
     @Operation(summary = "Update a category", description = "Endpoint for admins to update an existing product category.")
-    public ResponseEntity<ApiResponse> updateCategory(@PathVariable Long categoryId, @Valid @RequestBody HomeCategoryRequest.CategoryRequest request) {
+    public ResponseEntity<ApiResponse> updateCategory(@PathVariable Long categoryId, @Valid @RequestBody CategoryRequest request) {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.OK.value(),
                 "Category updated successfully",
@@ -67,7 +67,7 @@ public class CategoryController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{categoryId}")
     @Operation(summary = "Delete a category", description = "Endpoint for admins to delete a product category.")
     public ResponseEntity<ApiResponse> deleteCategory(@PathVariable Long categoryId) {
@@ -75,6 +75,19 @@ public class CategoryController {
                 HttpStatus.OK.value(),
                 categoryService.deleteCategory(categoryId),
                 null
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+
+
+    @GetMapping("/{parentCategoryId}/level3-subcategories")
+    @Operation(summary = "Get all level 3 subcategories", description = "Endpoint to fetch all level 3 subcategories under a given parent category (level 1 or 2).")
+    public ResponseEntity<ApiResponse> findAllLevel3Subcategories(@PathVariable Long parentCategoryId) {
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Level 3 subcategories fetched successfully",
+                categoryService.findAllLevel3Subcategories(parentCategoryId)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }

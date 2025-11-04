@@ -2,6 +2,8 @@ package com.bangvan.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -18,23 +20,35 @@ public class Address {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(name = "address_line_1", nullable = false)
-    String addressLine1;
 
-    @Column(name = "address_line_2")
-    String addressLine2;
+    @Column(name = "full_name", nullable = false)
+    String fullName;
 
-    @Column(name = "ward")
-    String ward;
+    @Column(name = "phone_number", nullable = false)
+    String phoneNumber;
 
-    @Column(name = "district")
+    @Email
+    @Column(name = "email")
+    String email;
+
+
+    @Column(name = "address", nullable = false)
+    String address;
+
+
+    @Column(name = "district", nullable = false)
     String district;
 
-    @Column(name = "province")
+    @Column(name = "province", nullable = false)
     String province;
 
     @Column(name = "country")
-    String country;
+    String country = "Việt Nam";
+
+
+    @Column(name = "note")
+    String note;
+
 
     @ManyToOne
     @JoinColumn(name = "user_id")

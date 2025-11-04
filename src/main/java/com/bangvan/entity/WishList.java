@@ -3,7 +3,10 @@ package com.bangvan.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -28,6 +31,6 @@ public class WishList {
             name = "wish_list_products",
             joinColumns = @JoinColumn(name = "wish_list_id"),
             inverseJoinColumns = @JoinColumn(name = "product_id"))
-    Set<Product> products = new HashSet<>();
+    List<Product> products = new ArrayList<>();
 
 }

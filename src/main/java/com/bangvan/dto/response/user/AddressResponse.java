@@ -1,4 +1,4 @@
-package com.bangvan.dto.response.user;
+package com.bangvan.dto.response.user; // Đảm bảo đúng package
 
 import lombok.Getter;
 import lombok.Setter;
@@ -7,10 +7,12 @@ import lombok.Setter;
 @Setter
 public class AddressResponse {
     private Long id;
-    private String addressLine1;
-    private String addressLine2;
-    private String ward;
+    private String fullName;
+    private String phoneNumber;
+    private String email;
+    private String address;
     private String district;
     private String province;
     private String country;
+    private String note;
 }

@@ -9,6 +9,7 @@ import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
 import com.bangvan.repository.CartItemRepository;
 import com.bangvan.repository.CartRepository;
+import com.bangvan.repository.CouponRepository; // <-- IMPORT MỚI
 import com.bangvan.repository.UserRepository;
 import com.bangvan.service.CartItemService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.Principal;
+import java.time.LocalDate; // <-- IMPORT MỚI
+import java.util.Optional; // <-- IMPORT MỚI
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,7 @@ public class CartItemServiceImpl implements CartItemService {
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
     private final ModelMapper modelMapper;
+    private final CouponRepository couponRepository; // <-- THÊM REPO
 
     private CartItemResponse mapCartItemToResponse(CartItem cartItem) {
         CartItemResponse cartItemResponse = modelMapper.map(cartItem, CartItemResponse.class);
@@ -95,23 +99,66 @@ public class CartItemServiceImpl implements CartItemService {
     }
 
 
+    // --- START MODIFICATION: Cập nhật updateCartTotals (đồng bộ với CartServiceImpl) ---
     private void updateCartTotals(Cart cart) {
-        BigDecimal totalPrice = BigDecimal.ZERO;
-        BigDecimal totalDiscountedPrice = BigDecimal.ZERO;
+        BigDecimal subTotalPrice = BigDecimal.ZERO; // Giá bán (Selling Price)
+        BigDecimal originalTotalPrice = BigDecimal.ZERO; // Giá gốc (Original Price)
         int totalItem = 0;
 
         for (CartItem cartsItem : cart.getCartItems()) {
-            totalPrice = totalPrice.add(cartsItem.getPrice());
-            totalDiscountedPrice = totalDiscountedPrice.add(cartsItem.getSellingPrice());
+            // Đảm bảo item được load (nếu cần, mặc dù trong transaction thường là OK)
+            Product product = cartsItem.getVariant().getProduct();
+
+            // Tính toán lại price và sellingPrice của cartItem (phòng trường hợp updateCartItem chưa save)
+            BigDecimal itemOriginalPrice = product.getPrice();
+            BigDecimal itemSellingPrice = product.getSellingPrice();
+            int quantity = cartsItem.getQuantity();
+
+            cartsItem.setPrice(itemOriginalPrice.multiply(BigDecimal.valueOf(quantity)));
+            cartsItem.setSellingPrice(itemSellingPrice.multiply(BigDecimal.valueOf(quantity)));
+            // cartItemRepository.save(cartsItem); // Không cần save ở đây nếu hàm gọi nó đã save cartItem
+
+            originalTotalPrice = originalTotalPrice.add(cartsItem.getPrice());
+            subTotalPrice = subTotalPrice.add(cartsItem.getSellingPrice());
             totalItem += cartsItem.getQuantity();
         }
 
-        cart.setTotalSellingPrice(totalDiscountedPrice);
         cart.setTotalItem(totalItem);
-        cart.setDiscount(calculateDiscountPercentage(totalPrice, totalDiscountedPrice));
+        cart.setTotalPrice(originalTotalPrice); // <-- SET TỔNG GIÁ GỐC
+
+        // Xử lý logic coupon (tính giảm giá dựa trên subTotalPrice)
+        if (cart.getCouponCode() != null && !cart.getCouponCode().isEmpty()) {
+            Optional<Coupon> couponOpt = couponRepository.findByCode(cart.getCouponCode());
+            if (couponOpt.isPresent()) {
+                Coupon coupon = couponOpt.get();
+                if (coupon.getIsActive() && coupon.getEndDate().isAfter(LocalDate.now().minusDays(1))
+                        && subTotalPrice.compareTo(coupon.getMinOrderValue()) >= 0) {
+
+                    BigDecimal discountAmount = subTotalPrice.multiply(coupon.getDiscountPercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                    BigDecimal finalPrice = subTotalPrice.subtract(discountAmount);
+
+                    cart.setTotalSellingPrice(finalPrice); // Giá cuối cùng (đã giảm)
+                    cart.setDiscount(coupon.getDiscountPercentage());
+                } else {
+                    cart.setCouponCode(null);
+                    cart.setDiscount(null);
+                    cart.setTotalSellingPrice(subTotalPrice);
+                    cart.setDiscount(calculateDiscountPercentage(originalTotalPrice, subTotalPrice));
+                }
+            } else {
+                cart.setCouponCode(null);
+                cart.setDiscount(null);
+                cart.setTotalSellingPrice(subTotalPrice);
+                cart.setDiscount(calculateDiscountPercentage(originalTotalPrice, subTotalPrice));
+            }
+        } else {
+            cart.setTotalSellingPrice(subTotalPrice);
+            cart.setDiscount(calculateDiscountPercentage(originalTotalPrice, subTotalPrice));
+        }
 
         cartRepository.save(cart);
     }
+    // --- END MODIFICATION ---
 
     private BigDecimal calculateDiscountPercentage(BigDecimal totalPrice, BigDecimal totalDiscountedPrice) {
 

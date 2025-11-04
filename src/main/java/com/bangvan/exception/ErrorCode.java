@@ -50,7 +50,8 @@ public enum ErrorCode {
     CART_EMPTY(1030,"Cart is empty",HttpStatus.BAD_REQUEST ),
     INVALID_INPUT(1031,"Invalid input",HttpStatus.BAD_REQUEST ),
     ORDER_CANCELLATION_NOT_ALLOWED(1032,"Order cancellation not allowed",HttpStatus.BAD_REQUEST ),
-    PRODUCT_OUT_OF_STOCK(1033, "Product is out of stock", HttpStatus.BAD_REQUEST);
+    PRODUCT_OUT_OF_STOCK(1033, "Product is out of stock", HttpStatus.BAD_REQUEST),
+    CATEGORY_HAS_CHILDREN(1034, "Cannot delete category with existing subcategories", HttpStatus.BAD_REQUEST);
 
 
     ErrorCode(int code, String message, HttpStatus status) {

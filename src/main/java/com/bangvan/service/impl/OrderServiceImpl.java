@@ -25,10 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,6 +52,55 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
         orderResponse.setOrderItems(orderItemResponses);
         return orderResponse;
+    }
+
+    @Override
+    public OrderResponse findOrderByOrderIdString(String orderId, Principal principal) {
+        // Find by the String orderId (UUID)
+        Order order = orderRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "OrderIdString", orderId));
+
+        // Get the current user
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", principal.getName()));
+
+        // Check permissions (Admin, Buyer, or Seller of this order)
+        boolean isAdmin = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
+
+        boolean isBuyer = order.getUser().getId().equals(user.getId());
+
+        boolean isSeller = false;
+        Optional<Seller> sellerOpt = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(principal.getName());
+        if (sellerOpt.isPresent()) {
+            isSeller = order.getSeller().getId().equals(sellerOpt.get().getId());
+        }
+
+        // If not authorized, deny access
+        if (!isAdmin && !isBuyer && !isSeller) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "You do not have permission to view this order.");
+        }
+
+        // Map to DTO and return
+        return mapOrderToOrderResponse(order);
+    }
+
+
+    @Override
+    public PageCustomResponse<OrderResponse> findAllOrders(Pageable pageable) {
+        Page<Order> orderPage = orderRepository.findAll(pageable); // Sử dụng phương thức findAll mặc định
+        List<OrderResponse> orderResponses = orderPage.getContent().stream()
+                .map(this::mapOrderToOrderResponse) // Tái sử dụng hàm map DTO
+                .collect(Collectors.toList());
+
+        return PageCustomResponse.<OrderResponse>builder()
+                .pageNo(orderPage.getNumber() + 1)
+                .pageSize(orderPage.getSize())
+                .totalPages(orderPage.getTotalPages())
+                .totalElements(orderPage.getTotalElements())
+                .pageContent(orderResponses)
+                .build();
     }
 
     @Transactional
@@ -155,6 +201,34 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public OrderResponse findOrderById(Long orderId, Principal principal) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "ID", orderId));
+
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", principal.getName()));
+
+        // Kiểm tra quyền: Admin, người mua, hoặc người bán của đơn hàng
+        boolean isAdmin = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
+
+        boolean isBuyer = order.getUser().getId().equals(user.getId());
+
+        boolean isSeller = false;
+        Optional<Seller> sellerOpt = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(principal.getName());
+        if (sellerOpt.isPresent()) {
+            isSeller = order.getSeller().getId().equals(sellerOpt.get().getId());
+        }
+
+        if (!isAdmin && !isBuyer && !isSeller) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "You do not have permission to view this order.");
+        }
+
+        return mapOrderToOrderResponse(order);
+    }
+
+    @Override
     public List<OrderResponse> findOrderByUser(Principal principal) {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
@@ -207,12 +281,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     @Override
-    public OrderResponse updateOrderStatus(Long orderId, String status, Principal principal) {
+    public OrderResponse updateOrderStatus(String orderId, String status, Principal principal) {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "ID", orderId));
 
         boolean isAdmin = user.getAuthorities().stream()
@@ -250,23 +324,26 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     @Override
-    public OrderResponse cancelOrder(Long orderId, Principal principal) {
+    public OrderResponse cancelOrder(String orderId, Principal principal) {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "ID", orderId));
+
+        // Tìm đơn hàng bằng String orderId (UUID)
+        Order order = orderRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "OrderIdString", orderId));
 
         if (!order.getUser().getId().equals(user.getId())) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
 
-        if (order.getOrderStatus() != OrderStatus.PENDING && order.getOrderStatus() != OrderStatus.PLACED) {
+        if (order.getOrderStatus() != OrderStatus.PENDING && order.getOrderStatus() != OrderStatus.PROCESSING) {
             throw new AppException(ErrorCode.ORDER_CANCELLATION_NOT_ALLOWED);
         }
 
         order.setOrderStatus(OrderStatus.CANCELLED);
 
+        // Khôi phục lại số lượng hàng
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant variant = item.getVariant();
             variant.setQuantity(variant.getQuantity() + item.getQuantity());
@@ -276,6 +353,5 @@ public class OrderServiceImpl implements OrderService {
         Order cancelledOrder = orderRepository.save(order);
         return mapOrderToOrderResponse(cancelledOrder);
     }
-
 
 }
