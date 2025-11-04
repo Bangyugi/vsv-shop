@@ -19,12 +19,18 @@ public interface OrderService {
 
     PageCustomResponse<OrderResponse> getSellerOrders(Principal principal, Pageable pageable);
 
+    OrderResponse findOrderById(Long orderId, Principal principal);
+
+    OrderResponse findOrderByOrderIdString(String orderId, Principal principal);
+
     @Transactional
-    OrderResponse updateOrderStatus(Long orderId, String status, Principal principal);
+    OrderResponse updateOrderStatus(String orderId, String status, Principal principal);
 
     @Transactional
     String deleteOrder(Long orderId);
 
+    PageCustomResponse<OrderResponse> findAllOrders(Pageable pageable);
+
     @Transactional
-    OrderResponse cancelOrder(Long orderId, Principal principal);
+    OrderResponse cancelOrder(String orderId, Principal principal);
 }

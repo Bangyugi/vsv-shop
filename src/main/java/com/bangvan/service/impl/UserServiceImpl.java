@@ -14,6 +14,7 @@ import com.bangvan.repository.CartRepository;
 import com.bangvan.repository.RoleRepository;
 import com.bangvan.repository.UserRepository;
 import com.bangvan.service.UserService;
+import com.bangvan.utils.AccountStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -94,15 +95,20 @@ public class UserServiceImpl implements UserService {
     }
     @Override
     public String deleteUser(Long userId){
-        User user = userRepository.findByIdAndEnabledIsTrue(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
-        userRepository.delete(user);
-        return "user with "+ userId +" was deleted successfully";
-    }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
+        user.setAccountStatus(AccountStatus.BANNED);
+        user.setEnabled(false);
 
+        userRepository.save(user);
+
+        log.info("User with ID {} was banned (soft deleted).", userId);
+        return "User with ID "+ userId +" was banned (soft deleted) successfully";
+    }
 
     @Override
     public UserResponse findUserById(Long userId){
-        User user = userRepository.findByIdAndEnabledIsTrue(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("user", "userId", userId));
         return modelMapper.map(user, UserResponse.class);
     }
 
@@ -114,7 +120,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageCustomResponse<UserResponse> findAllUsers(Pageable pageable){
-        Page<User> page = userRepository.findByEnabledIsTrue(pageable);
+        Page<User> page = userRepository.findAll(pageable);
         return PageCustomResponse.<UserResponse>builder()
                 .pageNo(page.getNumber()+1)
                 .pageSize(page.getSize())

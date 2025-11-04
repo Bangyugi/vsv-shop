@@ -9,27 +9,23 @@ import com.bangvan.entity.*;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
-import com.bangvan.repository.CategoryRepository;
-import com.bangvan.repository.ProductRepository;
-import com.bangvan.repository.ProductVariantRepository;
-import com.bangvan.repository.SellerRepository;
+import com.bangvan.repository.*;
 import com.bangvan.service.ProductService;
-import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.Principal;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,7 +37,9 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ModelMapper modelMapper;
     private final ProductRepository productRepository;
-    private final ProductVariantRepository productVariantRepository; // Thêm repository mới
+    private final ProductVariantRepository productVariantRepository;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "title", "price", "sellingPrice", "createdAt", "updatedAt", "averageRating");
+    private final UserRepository userRepository;
 
     @Transactional
     @Override
@@ -88,39 +86,92 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
         return mapProductToResponse(product);
     }
-
     @Override
-    public PageCustomResponse<ProductResponse> getAllProducts(BigDecimal minPrice, BigDecimal maxPrice, String color, String size, Long sellerId, String keyword, Long categoryId, Pageable pageable) {
+    public PageCustomResponse<ProductResponse> getAllProducts(
+            String keyword, Long categoryId, Long sellerId,
+            BigDecimal minPrice, BigDecimal maxPrice, String color, String size,
+            Double minRating,
+            Pageable pageable) {
+
         Specification<Product> spec = (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (minPrice != null) {
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice));
+
+
+            if (keyword != null && !keyword.isEmpty()) {
+                String keywordLower = "%" + keyword.toLowerCase() + "%";
+                Predicate titleLike = criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), keywordLower);
+                Predicate descriptionLike = criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), keywordLower);
+                predicates.add(criteriaBuilder.or(titleLike, descriptionLike));
             }
-            if (maxPrice != null) {
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
+
+
+            if (categoryId != null) {
+
+                Set<Long> categoryIdsToFilter = getAllCategoryIdsIncludingChildren(categoryId);
+                if (!categoryIdsToFilter.isEmpty()) {
+
+                    predicates.add(root.get("category").get("id").in(categoryIdsToFilter));
+                } else {
+                    log.warn("Category ID {} provided but no categories found (including children). No category filter applied.", categoryId);
+
+
+                }
             }
-            if (color != null && !color.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.join("variants").get("color"), color));
-            }
-            if (size != null && !size.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.join("variants").get("size"), size));
-            }
+
+
             if (sellerId != null) {
                 predicates.add(criteriaBuilder.equal(root.get("seller").get("id"), sellerId));
             }
-            if (keyword != null && !keyword.isEmpty()) {
-                predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), "%" + keyword.toLowerCase() + "%"));
+
+
+            if (minPrice != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("sellingPrice"), minPrice));
             }
-            if (categoryId != null) {
-                predicates.add(criteriaBuilder.equal(root.get("category").get("id"), categoryId));
+            if (maxPrice != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("sellingPrice"), maxPrice));
             }
-            query.distinct(true);
+
+
+            boolean needsDistinct = false;
+            if (color != null && !color.isEmpty() || size != null && !size.isEmpty()) {
+                Join<Product, ProductVariant> variantJoin = root.join("variants", JoinType.INNER);
+                if (color != null && !color.isEmpty()) {
+                    predicates.add(criteriaBuilder.equal(variantJoin.get("color"), color));
+                }
+                if (size != null && !size.isEmpty()) {
+                    if ("One Size".equalsIgnoreCase(size)) {
+                        predicates.add(criteriaBuilder.equal(variantJoin.get("size"), "One Size"));
+                    } else {
+                        predicates.add(criteriaBuilder.equal(variantJoin.get("size"), size));
+                    }
+                }
+                needsDistinct = true;
+            }
+
+
+
+            if (minRating != null && minRating > 0) {
+                Subquery<Double> avgRatingSubquery = query.subquery(Double.class);
+                Root<Review> reviewRootSub = avgRatingSubquery.from(Review.class);
+                avgRatingSubquery.select(criteriaBuilder.avg(reviewRootSub.get("rating")))
+                        .where(criteriaBuilder.equal(reviewRootSub.get("product"), root));
+
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(avgRatingSubquery, minRating));
+
+            }
+
+
+            if (needsDistinct) {
+                query.distinct(true);
+            }
+
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<Product> productPage = productRepository.findAll(spec, pageable);
+
         List<ProductResponse> productResponses = productPage.getContent().stream()
-                .map(this::mapProductToResponse)
+                .map(this::mapProductToResponseWithRating)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<ProductResponse>builder()
@@ -130,6 +181,75 @@ public class ProductServiceImpl implements ProductService {
                 .totalElements(productPage.getTotalElements())
                 .pageContent(productResponses)
                 .build();
+    }
+
+    private Set<Long> getAllCategoryIdsIncludingChildren(Long categoryId) {
+        Set<Long> collectedCategoryIds = new HashSet<>();
+        if (categoryId == null) {
+            return collectedCategoryIds;
+        }
+
+
+        List<Category> allCategories = categoryRepository.findAll();
+        Map<Long, List<Category>> childrenMap = allCategories.stream()
+                .filter(cat -> cat.getParentCategory() != null)
+                .collect(Collectors.groupingBy(cat -> cat.getParentCategory().getId()));
+
+
+        Queue<Category> categoriesToProcess = new LinkedList<>();
+
+
+        Category initialCategory = allCategories.stream()
+                .filter(cat -> cat.getId().equals(categoryId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
+        categoriesToProcess.offer(initialCategory);
+
+
+        while (!categoriesToProcess.isEmpty()) {
+            Category currentCategory = categoriesToProcess.poll();
+            collectedCategoryIds.add(currentCategory.getId());
+
+
+            List<Category> children = childrenMap.getOrDefault(currentCategory.getId(), Collections.emptyList());
+
+
+            for (Category child : children) {
+                categoriesToProcess.offer(child);
+            }
+        }
+
+        log.debug("Found category IDs including children for {}: {}", categoryId, collectedCategoryIds);
+        return collectedCategoryIds;
+    }
+
+    private ProductResponse mapProductToResponseWithRating(Product product) {
+        ProductResponse response = modelMapper.map(product, ProductResponse.class);
+        response.setTotalQuantity(product.getTotalQuantity());
+
+
+        double averageRating = product.getReviews().stream()
+                .mapToDouble(review -> review.getRating().doubleValue())
+                .average()
+                .orElse(0.0);
+
+        averageRating = Math.round(averageRating * 10.0) / 10.0;
+
+        response.setAverageRating(averageRating);
+        return response;
+    }
+
+    @Override
+    public String validateSortByField(String sortBy) {
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            log.warn("Invalid sort field provided: '{}'. Defaulting to 'createdAt'.", sortBy);
+            return "createdAt";
+        }
+
+
+
+
+        return sortBy;
     }
 
     @Transactional
@@ -145,8 +265,8 @@ public class ProductServiceImpl implements ProductService {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
 
-        // Cập nhật các trường thông thường của sản phẩm một cách thủ công
-        // để tránh ModelMapper thay thế collection
+
+
         product.setTitle(request.getTitle());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
@@ -188,12 +308,32 @@ public class ProductServiceImpl implements ProductService {
     public String deleteProductById(Long productId, Principal principal) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
+
         String username = principal.getName();
-        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
-        if (!product.getSeller().getId().equals(seller.getId())) {
-            throw new AppException(ErrorCode.ACCESS_DENIED);
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+
+        boolean isAdmin = currentUser.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
+
+
+        if (!isAdmin) {
+            Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
+                    .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+
+            if (!product.getSeller().getId().equals(seller.getId())) {
+                log.warn("User {} (Seller ID: {}) attempted to delete product {} owned by Seller ID: {}",
+                        username, seller.getId(), productId, product.getSeller().getId());
+                throw new AppException(ErrorCode.ACCESS_DENIED);
+            }
+            log.info("Seller {} is deleting their own product (ID: {})", username, productId);
+        } else {
+            log.info("Admin {} is deleting product (ID: {}) owned by Seller ID: {}",
+                    username, productId, product.getSeller().getId());
         }
+
+        // Admin hoặc Seller sở hữu có thể xóa
         productRepository.delete(product);
         return "Product with ID " + productId + " has been deleted successfully.";
     }
@@ -251,6 +391,27 @@ public class ProductServiceImpl implements ProductService {
         Page<Product> productPage = productRepository.findByTitleContainingIgnoreCase(keyword, pageable);
         List<ProductResponse> productResponses = productPage.getContent().stream()
                 .map(product -> modelMapper.map(product, ProductResponse.class))
+                .collect(Collectors.toList());
+
+        return PageCustomResponse.<ProductResponse>builder()
+                .pageNo(productPage.getNumber() + 1)
+                .pageSize(productPage.getSize())
+                .totalPages(productPage.getTotalPages())
+                .totalElements(productPage.getTotalElements())
+                .pageContent(productResponses)
+                .build();
+    }
+
+    @Override
+    public PageCustomResponse<ProductResponse> findProductByCategory(Long categoryId, Pageable pageable) {
+
+        categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
+
+        Page<Product> productPage = productRepository.findByCategoryId(categoryId, pageable);
+
+        List<ProductResponse> productResponses = productPage.getContent().stream()
+                .map(this::mapProductToResponse)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<ProductResponse>builder()

@@ -6,6 +6,7 @@ import com.bangvan.entity.Seller;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -25,6 +26,7 @@ public class ProductResponse {
     private Integer numRatings;
     private Seller seller;
     private Category category;
-    private Set<ProductVariant> variants;
+    private Set<ProductVariant> variants = new HashSet<>();
+    private Double averageRating;
     private Integer totalQuantity;
 }

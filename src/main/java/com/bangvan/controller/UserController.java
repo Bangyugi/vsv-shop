@@ -47,19 +47,6 @@ public class UserController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @Operation(summary = "Delete User", description = "Delete User")
-    @DeleteMapping("/delete/{userId}")
-    public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long userId){
-        ApiResponse apiResponse = ApiResponse.success(200, "User deleted successfully", userService.deleteUser(userId));
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
-
-    @Operation(summary = "Find User By Id", description = "Find User By Id")
-    @GetMapping("/find/{userId}")
-    public ResponseEntity<ApiResponse> findUserById(@PathVariable Long userId){
-        ApiResponse apiResponse = ApiResponse.success(200, "User found successfully", userService.findUserById(userId));
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
 
     @Operation(summary = "Find User's Profile", description = "Find User's Profile")
     @GetMapping("/profile")

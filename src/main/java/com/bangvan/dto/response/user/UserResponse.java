@@ -1,4 +1,5 @@
 package com.bangvan.dto.response.user;
+import com.bangvan.dto.response.seller.SellerResponse;
 import com.bangvan.entity.Role;
 import com.bangvan.utils.Gender;
 import lombok.*;
@@ -26,4 +27,5 @@ public class UserResponse  {
     private LocalDate birthDate;
     private Boolean enabled;
     private Set<Role> roles;
+
 }

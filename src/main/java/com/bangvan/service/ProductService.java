@@ -19,8 +19,14 @@ public interface ProductService {
 
 
 
-    PageCustomResponse<ProductResponse> getAllProducts(BigDecimal minPrice, BigDecimal maxPrice, String color, String size, Long sellerId, String keyword, Long categoryId, Pageable pageable);
+    PageCustomResponse<ProductResponse> getAllProducts(
+            String keyword, Long categoryId, Long sellerId,
+            BigDecimal minPrice, BigDecimal maxPrice, String color, String size,
+            Double minRating, // Thêm tham số rating
+            Pageable pageable
+    );
 
+    String validateSortByField(String sortBy);
     @Transactional
     ProductResponse updateProductById(Long productId, UpdateProductRequest request, Principal principal);
 
@@ -37,4 +43,6 @@ public interface ProductService {
     PageCustomResponse<ProductResponse> findProductBySeller(Long sellerId, Pageable pageable);
 
     PageCustomResponse<ProductResponse> searchProduct(String keyword, Pageable pageable);
+
+    PageCustomResponse<ProductResponse> findProductByCategory(Long categoryId, Pageable pageable);
 }

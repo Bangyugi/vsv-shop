@@ -2,7 +2,7 @@ package com.bangvan.utils;
 
 public enum OrderStatus {
     PENDING,
-    PLACED,
+    PROCESSING,
     CONFIRMED,
     SHIPPED,
     DELIVERED,

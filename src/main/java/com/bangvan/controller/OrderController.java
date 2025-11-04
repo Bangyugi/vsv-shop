@@ -47,6 +47,30 @@ public class OrderController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
+    @GetMapping("/{orderId}")
+    @PreAuthorize("isAuthenticated()") // Yêu cầu đăng nhập
+    @Operation(summary = "Find order by ID", description = "Endpoint for a user (buyer), seller, or admin to find a specific order by its ID.")
+    public ResponseEntity<ApiResponse> findOrderById(@PathVariable Long orderId, Principal principal) {
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Order found successfully",
+                orderService.findOrderById(orderId, principal)
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+    @GetMapping("/uuid/{orderId}") // Sử dụng path khác để phân biệt
+    @PreAuthorize("isAuthenticated()") // Yêu cầu đăng nhập
+    @Operation(summary = "Find order by OrderId (String UUID)", description = "Endpoint for a user (buyer), seller, or admin to find a specific order by its public String UUID (orderId).")
+    public ResponseEntity<ApiResponse> findOrderByOrderIdString(@PathVariable String orderId, Principal principal) {
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Order found successfully",
+                orderService.findOrderByOrderIdString(orderId, principal)
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
     @GetMapping("/seller")
     @PreAuthorize("hasRole('SELLER')")
     @Operation(summary = "Get orders for the current seller", description = "Endpoint for sellers to view their orders with pagination")
@@ -70,7 +94,7 @@ public class OrderController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
     @Operation(summary = "Update an order's status", description = "Endpoint for sellers or admins to update the status of an order")
     public ResponseEntity<ApiResponse> updateOrderStatus(
-            @PathVariable Long orderId,
+            @PathVariable String orderId,
             @RequestBody UpdateOrderStatusRequest request,
             Principal principal
     ) {
@@ -93,11 +117,10 @@ public class OrderController {
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
-
-    @PatchMapping("/{orderId}/cancel")
-    @Operation(summary = "Cancel an order", description = "Endpoint for users to cancel their own order")
+    @PatchMapping("/uuid/{orderId}/cancel")
+    @Operation(summary = "Cancel an order by OrderId (String UUID)", description = "Endpoint for users to cancel their own order using the String orderId.")
     public ResponseEntity<ApiResponse> cancelOrder(
-            @PathVariable Long orderId,
+            @PathVariable String orderId,
             Principal principal
     ) {
         ApiResponse apiResponse = ApiResponse.success(

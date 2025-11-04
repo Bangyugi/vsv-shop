@@ -49,25 +49,30 @@ public class ProductController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all products with pagination and sorting", description = "Endpoint to fetch a paginated list of all products")
+    @Operation(summary = "Get all products with filters, pagination and sorting",
+            description = "Public endpoint to fetch a paginated list of products with various filters.")
     public ResponseEntity<ApiResponse> getAllProducts(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "sellerId", required = false) Long sellerId,
             @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
             @RequestParam(value = "color", required = false) String color,
             @RequestParam(value = "size", required = false) String size,
-            @RequestParam(value = "seller", required = false) Long sellerId,
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "category", required = false) Long categoryId,
+            @RequestParam(value = "minRating", required = false) Double minRating, // Thêm tham số rating
             @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
             @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
-            @RequestParam(value = "sortDir", defaultValue = "ASC", required = false) String sortDir
+            @RequestParam(value = "sortDir", defaultValue = "DESC", required = false) String sortDir // Mặc định DESC cho mới nhất
     ) {
-        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
+        // Validate sortBy field if necessary
+        String validSortBy = productService.validateSortByField(sortBy); // Thêm validation sort field nếu cần
+
+        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), validSortBy));
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.OK.value(),
                 "Products fetched successfully",
-                productService.getAllProducts(minPrice, maxPrice, color, size, sellerId, keyword, categoryId, pageable)
+                productService.getAllProducts(keyword, categoryId, sellerId, minPrice, maxPrice, color, size, minRating, pageable)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
@@ -88,7 +93,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{productId}")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @Operation(summary = "Delete a product by its ID", description = "Endpoint for sellers to delete their own product")
     public ResponseEntity<ApiResponse> deleteProductById(
             @PathVariable Long productId,

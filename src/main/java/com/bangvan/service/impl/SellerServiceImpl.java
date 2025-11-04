@@ -4,6 +4,7 @@ import com.bangvan.dto.request.seller.BecomeSellerRequest;
 import com.bangvan.dto.request.seller.UpdateSellerRequest;
 import com.bangvan.dto.response.PageCustomResponse;
 import com.bangvan.dto.response.seller.SellerResponse;
+import com.bangvan.dto.response.seller.UpdateSellerStatusRequest;
 import com.bangvan.dto.response.user.UserResponse;
 import com.bangvan.entity.Address;
 import com.bangvan.entity.Role;
@@ -16,7 +17,9 @@ import com.bangvan.repository.RoleRepository;
 import com.bangvan.repository.SellerRepository;
 import com.bangvan.repository.UserRepository;
 import com.bangvan.service.SellerService;
+import com.bangvan.utils.AccountStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +30,7 @@ import java.security.Principal;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SellerServiceImpl implements SellerService {
 
 
@@ -35,11 +39,23 @@ public class SellerServiceImpl implements SellerService {
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
 
+
+    private SellerResponse mapSellerToSellerResponse(Seller seller) {
+
+        SellerResponse sellerResponse = modelMapper.map(seller, SellerResponse.class);
+        UserResponse userResponse = modelMapper.map(seller.getUser(), UserResponse.class);
+        sellerResponse.setUser(userResponse);
+
+        return sellerResponse;
+    }
+
     @Override
     public SellerResponse getProfile(Principal principal){
         String username = principal.getName();
         Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
-        return modelMapper.map(seller, SellerResponse.class);
+
+
+        return mapSellerToSellerResponse(seller);
     }
 
     @Transactional
@@ -68,7 +84,8 @@ public class SellerServiceImpl implements SellerService {
 
         seller = sellerRepository.save(seller);
 
-        return modelMapper.map(seller,SellerResponse.class);
+
+        return mapSellerToSellerResponse(seller);
     }
 
 
@@ -82,7 +99,9 @@ public class SellerServiceImpl implements SellerService {
         seller.setPickupAddress(request.getPickupAddress());
         seller.setGstin(request.getGstin());
         sellerRepository.save(seller);
-        return modelMapper.map(seller, SellerResponse.class);
+
+
+        return mapSellerToSellerResponse(seller);
     }
 
     @Transactional
@@ -96,13 +115,60 @@ public class SellerServiceImpl implements SellerService {
 
     @Override
     public PageCustomResponse<SellerResponse> getAllSellers(Pageable pageable){
-        Page<Seller> page = sellerRepository.findByUser_EnabledIsTrue(pageable);
+        Page<Seller> page = sellerRepository.findAll(pageable);
         return PageCustomResponse.<SellerResponse>builder()
                 .pageNo(page.getNumber()+1)
                 .pageSize(page.getSize())
                 .totalPages(page.getTotalPages())
                 .totalElements(page.getTotalElements())
-                .pageContent(page.getContent().stream().map(seller -> modelMapper.map(seller, SellerResponse.class)).toList()).build();
+
+                .pageContent(page.getContent().stream().map(this::mapSellerToSellerResponse).toList()).build();
+    }
+
+
+    @Transactional(readOnly = true)
+    @Override
+    public SellerResponse findSellerById(Long sellerId) {
+        Seller seller = sellerRepository.findById(sellerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller", "ID", sellerId));
+
+        return mapSellerToSellerResponse(seller);
+    }
+
+    @Transactional
+    @Override
+    public SellerResponse updateSellerStatus(Long sellerId, UpdateSellerStatusRequest request) {
+        Seller seller = sellerRepository.findById(sellerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller", "ID", sellerId));
+
+        User user = seller.getUser();
+
+        AccountStatus newStatus;
+        try {
+
+            newStatus = AccountStatus.valueOf(request.getStatus().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid status value provided: {}", request.getStatus());
+            throw new AppException(ErrorCode.INVALID_INPUT, "Invalid status value: " + request.getStatus());
+        }
+
+
+        seller.setAccountStatus(newStatus);
+        user.setAccountStatus(newStatus);
+
+
+
+        if (newStatus == AccountStatus.ACTIVE) {
+            user.setEnabled(true);
+        } else {
+            user.setEnabled(false);
+        }
+
+
+        userRepository.save(user);
+        Seller updatedSeller = sellerRepository.save(seller);
+
+        return mapSellerToSellerResponse(updatedSeller);
     }
 
 }

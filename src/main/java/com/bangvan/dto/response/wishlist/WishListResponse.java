@@ -6,6 +6,9 @@ import com.bangvan.entity.User;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -13,5 +16,5 @@ import java.util.Set;
 public class WishListResponse {
     private Long id;
     private User user;
-    private Set<Product> products;
+    private List<Product> products = new ArrayList<>();
 }

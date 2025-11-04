@@ -4,6 +4,7 @@ package com.bangvan.dto.request.auth;
 import com.bangvan.utils.Gender;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Past;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -37,6 +38,7 @@ public class RegisterRequest {
     private String lastName;
 
     @NotBlank
+    @Past(message = "Date of birth must be in the past")
     private LocalDate birthDate;
 
     private Gender gender;

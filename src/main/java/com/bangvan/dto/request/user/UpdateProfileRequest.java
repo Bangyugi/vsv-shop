@@ -5,6 +5,7 @@ import com.bangvan.utils.Gender;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -32,9 +33,9 @@ public class UpdateProfileRequest {
     @NotBlank
     private String lastName;
 
-    @NotBlank
-    private String birthDate;
-
+    @NotNull(message = "Date of birth can not be null")
+    @Past(message = "Date of birth must be in the past")
+    private LocalDate birthDate;
     private String avatar = "https://cdn-icons-png.flaticon.com/512/3607/3607444.png";
 
     private Gender gender;

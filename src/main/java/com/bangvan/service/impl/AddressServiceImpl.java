@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.security.Principal;
 import java.util.List;
@@ -36,7 +37,12 @@ public class AddressServiceImpl implements AddressService {
         log.info("Adding address for user: {}", user.getUsername());
 
         Address address = modelMapper.map(request, Address.class);
-        address.setUser(user); // Gán địa chỉ này cho người dùng hiện tại
+        address.setUser(user);
+
+        if (!StringUtils.hasText(address.getCountry())) {
+            address.setCountry("Việt Nam");
+            log.info("Country not provided, defaulting to Việt Nam");
+        }
 
         Address savedAddress = addressRepository.save(address);
         log.info("Address saved with ID: {}", savedAddress.getId());
@@ -48,7 +54,6 @@ public class AddressServiceImpl implements AddressService {
         User user = getUserFromPrincipal(principal);
         log.info("Fetching addresses for user: {}", user.getUsername());
 
-        // Lấy tất cả địa chỉ từ User entity (vì đã có @OneToMany)
         List<Address> addresses = user.getAddresses().stream().toList();
 
         return addresses.stream()
@@ -61,14 +66,7 @@ public class AddressServiceImpl implements AddressService {
         User user = getUserFromPrincipal(principal);
         log.info("Fetching address with ID: {} for user: {}", addressId, user.getUsername());
 
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address", "ID", addressId));
-
-        // Kiểm tra địa chỉ có thuộc về user đang đăng nhập không
-        if (!address.getUser().getId().equals(user.getId())) {
-            log.warn("User {} attempted to access address {} which does not belong to them.", user.getUsername(), addressId);
-            throw new AppException(ErrorCode.ACCESS_DENIED);
-        }
+        Address address = findAddressByIdAndCheckOwnership(addressId, user);
 
         return modelMapper.map(address, AddressResponse.class);
     }
@@ -80,19 +78,13 @@ public class AddressServiceImpl implements AddressService {
         User user = getUserFromPrincipal(principal);
         log.info("Updating address with ID: {} for user: {}", addressId, user.getUsername());
 
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address", "ID", addressId));
+        Address address = findAddressByIdAndCheckOwnership(addressId, user);
 
-        // Kiểm tra địa chỉ có thuộc về user đang đăng nhập không
-        if (!address.getUser().getId().equals(user.getId())) {
-            log.warn("User {} attempted to update address {} which does not belong to them.", user.getUsername(), addressId);
-            throw new AppException(ErrorCode.ACCESS_DENIED);
-        }
-
-        // Cập nhật thông tin từ request vào address entity
         modelMapper.map(request, address);
-        // Đảm bảo user không bị thay đổi (ModelMapper có thể ghi đè nếu tên trường giống)
-        address.setUser(user);
+
+        if (!StringUtils.hasText(request.getCountry()) && !StringUtils.hasText(address.getCountry())) {
+            address.setCountry("Việt Nam");
+        }
 
         Address updatedAddress = addressRepository.save(address);
         log.info("Address with ID: {} updated successfully.", updatedAddress.getId());
@@ -105,27 +97,28 @@ public class AddressServiceImpl implements AddressService {
         User user = getUserFromPrincipal(principal);
         log.info("Deleting address with ID: {} for user: {}", addressId, user.getUsername());
 
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address", "ID", addressId));
+        Address address = findAddressByIdAndCheckOwnership(addressId, user);
 
-        // Kiểm tra địa chỉ có thuộc về user đang đăng nhập không
-        if (!address.getUser().getId().equals(user.getId())) {
-            log.warn("User {} attempted to delete address {} which does not belong to them.", user.getUsername(), addressId);
-            throw new AppException(ErrorCode.ACCESS_DENIED);
-        }
-
-        // Kiểm tra xem địa chỉ có đang được sử dụng trong đơn hàng nào không (Tùy chọn)
-        // Nếu có, bạn có thể không cho xóa hoặc xử lý logic khác
-        // Ví dụ: if (orderRepository.existsByShippingAddressId(addressId)) { throw new AppException(...); }
+        //TODO: Có thể thêm If để kiểm tra xem địa chỉ có đang được sử dụng trong đơn hàng nào không
 
         addressRepository.delete(address);
         log.info("Address with ID: {} deleted successfully.", addressId);
     }
 
-    // Hàm tiện ích để lấy User từ Principal
     private User getUserFromPrincipal(Principal principal) {
         String username = principal.getName();
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+    }
+
+    private Address findAddressByIdAndCheckOwnership(Long addressId, User user) {
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address", "ID", addressId));
+
+        if (!address.getUser().getId().equals(user.getId())) {
+            log.warn("User {} attempted to access or modify address {} which does not belong to them.", user.getUsername(), addressId);
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+        return address;
     }
 }
