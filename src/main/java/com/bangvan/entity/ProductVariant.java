@@ -27,6 +27,9 @@ public class ProductVariant {
 
     Integer quantity;
 
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    Integer sold = 0;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id")
     @JsonIgnore

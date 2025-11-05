@@ -15,6 +15,7 @@ import com.bangvan.service.OrderService;
 import com.bangvan.utils.OrderStatus;
 import com.bangvan.utils.PaymentMethod;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
@@ -56,15 +58,15 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse findOrderByOrderIdString(String orderId, Principal principal) {
-        // Find by the String orderId (UUID)
+
         Order order = orderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "OrderIdString", orderId));
 
-        // Get the current user
+
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", principal.getName()));
 
-        // Check permissions (Admin, Buyer, or Seller of this order)
+
         boolean isAdmin = user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role -> role.equals("ROLE_ADMIN"));
@@ -77,21 +79,21 @@ public class OrderServiceImpl implements OrderService {
             isSeller = order.getSeller().getId().equals(sellerOpt.get().getId());
         }
 
-        // If not authorized, deny access
+
         if (!isAdmin && !isBuyer && !isSeller) {
             throw new AppException(ErrorCode.ACCESS_DENIED, "You do not have permission to view this order.");
         }
 
-        // Map to DTO and return
+
         return mapOrderToOrderResponse(order);
     }
 
 
     @Override
     public PageCustomResponse<OrderResponse> findAllOrders(Pageable pageable) {
-        Page<Order> orderPage = orderRepository.findAll(pageable); // Sử dụng phương thức findAll mặc định
+        Page<Order> orderPage = orderRepository.findAll(pageable);
         List<OrderResponse> orderResponses = orderPage.getContent().stream()
-                .map(this::mapOrderToOrderResponse) // Tái sử dụng hàm map DTO
+                .map(this::mapOrderToOrderResponse)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<OrderResponse>builder()
@@ -136,6 +138,15 @@ public class OrderServiceImpl implements OrderService {
 
         for (Map.Entry<Seller, List<CartItem>> entry : itemsBySeller.entrySet()) {
             Seller seller = entry.getKey();
+
+
+
+            if (seller.getId().equals(user.getId())) {
+                log.warn("User (Seller ID: {}) attempted to order their own product.", user.getId());
+                throw new AppException(ErrorCode.ACCESS_DENIED, "Sellers cannot purchase their own products. Product from seller ID " + seller.getId() + " is in your cart.");
+            }
+
+
             List<CartItem> sellerCartItems = entry.getValue();
 
             Order order = new Order();
@@ -159,6 +170,13 @@ public class OrderServiceImpl implements OrderService {
                 }
 
                 variant.setQuantity(variant.getQuantity() - requestedQuantity);
+
+
+                int currentSold = (variant.getSold() != null) ? variant.getSold() : 0;
+                variant.setSold(currentSold + requestedQuantity);
+                log.info("Updating stock for variant ID {}: quantity = {}, sold = {}", variant.getId(), variant.getQuantity(), variant.getSold());
+
+
                 productVariantRepository.save(variant);
 
                 OrderItem orderItem = new OrderItem();
@@ -208,7 +226,7 @@ public class OrderServiceImpl implements OrderService {
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", principal.getName()));
 
-        // Kiểm tra quyền: Admin, người mua, hoặc người bán của đơn hàng
+
         boolean isAdmin = user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role -> role.equals("ROLE_ADMIN"));
@@ -233,7 +251,7 @@ public class OrderServiceImpl implements OrderService {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
-        List<Order> orders = orderRepository.findByUserAndOrderStatusNotDelivered(user);
+        List<Order> orders = orderRepository.findAllByUser(user);
         return orders.stream()
                 .map(order -> mapOrderToOrderResponse(order))
                 .collect(Collectors.toList());
@@ -329,7 +347,7 @@ public class OrderServiceImpl implements OrderService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
-        // Tìm đơn hàng bằng String orderId (UUID)
+
         Order order = orderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "OrderIdString", orderId));
 
@@ -343,10 +361,18 @@ public class OrderServiceImpl implements OrderService {
 
         order.setOrderStatus(OrderStatus.CANCELLED);
 
-        // Khôi phục lại số lượng hàng
+
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant variant = item.getVariant();
             variant.setQuantity(variant.getQuantity() + item.getQuantity());
+
+
+            int currentSold = (variant.getSold() != null) ? variant.getSold() : 0;
+
+            variant.setSold(Math.max(0, currentSold - item.getQuantity()));
+            log.info("Restoring stock for variant ID {}: quantity = {}, sold = {}", variant.getId(), variant.getQuantity(), variant.getSold());
+
+
             productVariantRepository.save(variant);
         }
 

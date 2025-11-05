@@ -38,8 +38,13 @@ public class ProductServiceImpl implements ProductService {
     private final ModelMapper modelMapper;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "title", "price", "sellingPrice", "createdAt", "updatedAt", "averageRating");
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "title", "price", "sellingPrice", "createdAt", "updatedAt", "averageRating", "sold");
     private final UserRepository userRepository;
+
+
+
+    private final ReviewRepository reviewRepository;
+
 
     @Transactional
     @Override
@@ -61,6 +66,8 @@ public class ProductServiceImpl implements ProductService {
             newVariant.setColor(variantRequest.getColor());
             newVariant.setSize(variantRequest.getSize());
             newVariant.setQuantity(variantRequest.getQuantity());
+
+            newVariant.setSold(0);
             String sku = (product.getTitle() + "-" + variantRequest.getColor() + "-" + variantRequest.getSize())
                     .replaceAll("\\s+", "-").toUpperCase();
             newVariant.setSku(sku);
@@ -76,6 +83,7 @@ public class ProductServiceImpl implements ProductService {
     private ProductResponse mapProductToResponse(Product product) {
         ProductResponse response = modelMapper.map(product, ProductResponse.class);
         response.setTotalQuantity(product.getTotalQuantity());
+        response.setTotalSold(product.getTotalSold());
         return response;
     }
 
@@ -84,8 +92,11 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse getProductById(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", productId));
-        return mapProductToResponse(product);
+
+
+        return mapProductToResponseWithRating(product);
     }
+
     @Override
     public PageCustomResponse<ProductResponse> getAllProducts(
             String keyword, Long categoryId, Long sellerId,
@@ -96,7 +107,6 @@ public class ProductServiceImpl implements ProductService {
         Specification<Product> spec = (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-
             if (keyword != null && !keyword.isEmpty()) {
                 String keywordLower = "%" + keyword.toLowerCase() + "%";
                 Predicate titleLike = criteriaBuilder.like(criteriaBuilder.lower(root.get("title")), keywordLower);
@@ -104,25 +114,18 @@ public class ProductServiceImpl implements ProductService {
                 predicates.add(criteriaBuilder.or(titleLike, descriptionLike));
             }
 
-
             if (categoryId != null) {
-
                 Set<Long> categoryIdsToFilter = getAllCategoryIdsIncludingChildren(categoryId);
                 if (!categoryIdsToFilter.isEmpty()) {
-
                     predicates.add(root.get("category").get("id").in(categoryIdsToFilter));
                 } else {
                     log.warn("Category ID {} provided but no categories found (including children). No category filter applied.", categoryId);
-
-
                 }
             }
-
 
             if (sellerId != null) {
                 predicates.add(criteriaBuilder.equal(root.get("seller").get("id"), sellerId));
             }
-
 
             if (minPrice != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("sellingPrice"), minPrice));
@@ -130,7 +133,6 @@ public class ProductServiceImpl implements ProductService {
             if (maxPrice != null) {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("sellingPrice"), maxPrice));
             }
-
 
             boolean needsDistinct = false;
             if (color != null && !color.isEmpty() || size != null && !size.isEmpty()) {
@@ -148,18 +150,20 @@ public class ProductServiceImpl implements ProductService {
                 needsDistinct = true;
             }
 
-
-
             if (minRating != null && minRating > 0) {
                 Subquery<Double> avgRatingSubquery = query.subquery(Double.class);
+
+
+
                 Root<Review> reviewRootSub = avgRatingSubquery.from(Review.class);
+                Join<Review, OrderItem> orderItemJoin = reviewRootSub.join("orderItem");
+                Join<OrderItem, ProductVariant> variantJoin = orderItemJoin.join("variant");
                 avgRatingSubquery.select(criteriaBuilder.avg(reviewRootSub.get("rating")))
-                        .where(criteriaBuilder.equal(reviewRootSub.get("product"), root));
+                        .where(criteriaBuilder.equal(variantJoin.get("product"), root));
+
 
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(avgRatingSubquery, minRating));
-
             }
-
 
             if (needsDistinct) {
                 query.distinct(true);
@@ -189,15 +193,12 @@ public class ProductServiceImpl implements ProductService {
             return collectedCategoryIds;
         }
 
-
         List<Category> allCategories = categoryRepository.findAll();
         Map<Long, List<Category>> childrenMap = allCategories.stream()
                 .filter(cat -> cat.getParentCategory() != null)
                 .collect(Collectors.groupingBy(cat -> cat.getParentCategory().getId()));
 
-
         Queue<Category> categoriesToProcess = new LinkedList<>();
-
 
         Category initialCategory = allCategories.stream()
                 .filter(cat -> cat.getId().equals(categoryId))
@@ -205,14 +206,11 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
         categoriesToProcess.offer(initialCategory);
 
-
         while (!categoriesToProcess.isEmpty()) {
             Category currentCategory = categoriesToProcess.poll();
             collectedCategoryIds.add(currentCategory.getId());
 
-
             List<Category> children = childrenMap.getOrDefault(currentCategory.getId(), Collections.emptyList());
-
 
             for (Category child : children) {
                 categoriesToProcess.offer(child);
@@ -223,21 +221,25 @@ public class ProductServiceImpl implements ProductService {
         return collectedCategoryIds;
     }
 
+
+
     private ProductResponse mapProductToResponseWithRating(Product product) {
         ProductResponse response = modelMapper.map(product, ProductResponse.class);
         response.setTotalQuantity(product.getTotalQuantity());
+        response.setTotalSold(product.getTotalSold());
 
 
-        double averageRating = product.getReviews().stream()
-                .mapToDouble(review -> review.getRating().doubleValue())
-                .average()
-                .orElse(0.0);
+        Double averageRating = reviewRepository.findAverageRatingByProductId(product.getId());
 
-        averageRating = Math.round(averageRating * 10.0) / 10.0;
 
-        response.setAverageRating(averageRating);
+        double avg = (averageRating != null) ? averageRating : 0.0;
+
+        avg = Math.round(avg * 10.0) / 10.0;
+
+        response.setAverageRating(avg);
         return response;
     }
+
 
     @Override
     public String validateSortByField(String sortBy) {
@@ -245,10 +247,6 @@ public class ProductServiceImpl implements ProductService {
             log.warn("Invalid sort field provided: '{}'. Defaulting to 'createdAt'.", sortBy);
             return "createdAt";
         }
-
-
-
-
         return sortBy;
     }
 
@@ -264,8 +262,6 @@ public class ProductServiceImpl implements ProductService {
         if (!product.getSeller().getId().equals(seller.getId())) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
-
-
 
         product.setTitle(request.getTitle());
         product.setDescription(request.getDescription());
@@ -283,19 +279,35 @@ public class ProductServiceImpl implements ProductService {
         }
 
         if (request.getVariants() != null) {
-            product.getVariants().clear();
+            Map<Long, ProductVariant> existingVariantsMap = product.getVariants().stream()
+                    .collect(Collectors.toMap(ProductVariant::getId, v -> v, (v1, v2) -> v1));
+
+            Set<ProductVariant> updatedVariants = new HashSet<>();
 
             for (ProductVariant variantRequest : request.getVariants()) {
-                ProductVariant newVariant = new ProductVariant();
-                newVariant.setColor(variantRequest.getColor());
-                newVariant.setSize(variantRequest.getSize());
-                newVariant.setQuantity(variantRequest.getQuantity());
+                ProductVariant variantToUpdate;
+                if (variantRequest.getId() != null && existingVariantsMap.containsKey(variantRequest.getId())) {
+                    variantToUpdate = existingVariantsMap.get(variantRequest.getId());
+                    existingVariantsMap.remove(variantRequest.getId());
+                } else {
+                    variantToUpdate = new ProductVariant();
+                    variantToUpdate.setProduct(product);
+                    variantToUpdate.setSold(0);
+                }
+
+                variantToUpdate.setColor(variantRequest.getColor());
+                variantToUpdate.setSize(variantRequest.getSize());
+                variantToUpdate.setQuantity(variantRequest.getQuantity());
+
                 String sku = (product.getTitle() + "-" + variantRequest.getColor() + "-" + variantRequest.getSize())
                         .replaceAll("\\s+", "-").toUpperCase();
-                newVariant.setSku(sku);
-                newVariant.setProduct(product);
-                product.getVariants().add(newVariant);
+                variantToUpdate.setSku(sku);
+
+                updatedVariants.add(variantToUpdate);
             }
+
+            product.getVariants().clear();
+            product.getVariants().addAll(updatedVariants);
         }
 
         Product updatedProduct = productRepository.save(product);
@@ -317,7 +329,6 @@ public class ProductServiceImpl implements ProductService {
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role -> role.equals("ROLE_ADMIN"));
 
-
         if (!isAdmin) {
             Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
                     .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
@@ -333,11 +344,9 @@ public class ProductServiceImpl implements ProductService {
                     username, productId, product.getSeller().getId());
         }
 
-        // Admin hoặc Seller sở hữu có thể xóa
         productRepository.delete(product);
         return "Product with ID " + productId + " has been deleted successfully.";
     }
-
 
     @Override
     public Integer calculateDiscountPercentage(BigDecimal price, BigDecimal sellingPrice) {
@@ -367,14 +376,14 @@ public class ProductServiceImpl implements ProductService {
         variant.setQuantity(request.getQuantity());
         productVariantRepository.save(variant);
         Product updatedProduct = productRepository.findById(product.getId()).get();
-        return mapProductToResponse(updatedProduct);
+        return mapProductToResponseWithRating(updatedProduct);
     }
 
     @Override
     public PageCustomResponse<ProductResponse> findProductBySeller(Long sellerId, Pageable pageable) {
         Page<Product> productPage = productRepository.findBySellerId(sellerId, pageable);
         List<ProductResponse> productResponses = productPage.getContent().stream()
-                .map(product -> modelMapper.map(product, ProductResponse.class))
+                .map(this::mapProductToResponseWithRating)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<ProductResponse>builder()
@@ -387,10 +396,19 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public PageCustomResponse<ProductResponse> getMyProducts(Principal principal, Pageable pageable) {
+        String username = principal.getName();
+        Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller", "username", username));
+
+        return findProductBySeller(seller.getId(), pageable);
+    }
+
+    @Override
     public PageCustomResponse<ProductResponse> searchProduct(String keyword, Pageable pageable) {
         Page<Product> productPage = productRepository.findByTitleContainingIgnoreCase(keyword, pageable);
         List<ProductResponse> productResponses = productPage.getContent().stream()
-                .map(product -> modelMapper.map(product, ProductResponse.class))
+                .map(this::mapProductToResponseWithRating)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<ProductResponse>builder()
@@ -404,14 +422,13 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public PageCustomResponse<ProductResponse> findProductByCategory(Long categoryId, Pageable pageable) {
-
         categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
 
         Page<Product> productPage = productRepository.findByCategoryId(categoryId, pageable);
 
         List<ProductResponse> productResponses = productPage.getContent().stream()
-                .map(this::mapProductToResponse)
+                .map(this::mapProductToResponseWithRating)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<ProductResponse>builder()

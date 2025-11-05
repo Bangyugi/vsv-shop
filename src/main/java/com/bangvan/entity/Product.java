@@ -46,10 +46,22 @@ public class Product extends AbstractEntity {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     Set<ProductVariant> variants = new HashSet<>();
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    List<Review> reviews = new ArrayList<>();
 
     public int getTotalQuantity() {
-        return variants.stream().mapToInt(ProductVariant::getQuantity).sum();
+        if (variants == null) {
+            return 0;
+        }
+        return variants.stream()
+                .mapToInt(variant -> (variant.getQuantity() != null) ? variant.getQuantity() : 0)
+                .sum();
+    }
+
+    public int getTotalSold() {
+        if (variants == null) {
+            return 0;
+        }
+        return variants.stream()
+                .mapToInt(variant -> (variant.getSold() != null) ? variant.getSold() : 0)
+                .sum();
     }
 }

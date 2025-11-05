@@ -166,44 +166,44 @@ VALUES
 
 INSERT INTO product_variants (product_id, sku, color, size, quantity)
 VALUES
-    -- Men Skinny Jeans
+    -- Men Skinny Jeans (product_id = 1)
     (1, 'JE001-BLUE-30', 'Blue', '30', 50),
     (1, 'JE001-BLUE-31', 'Blue', '31', 50),
     (1, 'JE001-BLACK-30', 'Black', '30', 40),
 
-    -- Oversized Graphic T-Shirt
+    -- Oversized Graphic T-Shirt (product_id = 2)
     (2, 'TS001-WHITE-M', 'White', 'M', 60),
     (2, 'TS001-BLACK-L', 'Black', 'L', 60),
     (2, 'TS001-GREEN-L', 'Green', 'L', 60),
 
-    -- White Basic Sneakers
+    -- White Basic Sneakers (product_id = 3)
     (3, 'SH001-WHITE-40', 'White', '40', 40),
     (3, 'SH001-WHITE-41', 'White', '41', 40),
 
 
-    -- Canvas Tote Bag
+    -- Canvas Tote Bag (product_id = 4)
     (4, 'BG001-BEIGE-ONESIZE', 'Beige', 'One Size', 100),
 
-    -- Men Kaki Jacket
+    -- Men Kaki Jacket (product_id = 5)
     (5, 'JK001-OLIVE-L', 'Olive', 'L', 30),
     (5, 'JK001-BLACK-M', 'Black', 'M', 30),
 
-    -- Running Sports Shoes
+    -- Running Sports Shoes (product_id = 6)
     (6, 'RS001-NAVY-41', 'Navy', '41', 35),
     (6, 'RS001-BLACK-42', 'Black', '42', 35),
 
-    -- Classic Polo Shirt
+    -- Classic Polo Shirt (product_id = 7)
     (7, 'PO001-WHITE-M', 'White', 'M', 40),
     (7, 'PO001-GRAY-L', 'Gray', 'L', 40),
 
-    -- Mini Crossbody Bag
+    -- Mini Crossbody Bag (product_id = 8)
     (8, 'BG002-PINK-ONESIZE', 'Pink', 'One Size', 60),
 
-    -- Unisex Jogger Pants
+    -- Unisex Jogger Pants (product_id = 9)
     (9, 'JG001-BLACK-M', 'Black', 'M', 80),
     (9, 'JG001-GRAY-L', 'Gray', 'L', 60),
 
-    -- Leather Formal Shoes
+    -- Leather Formal Shoes (product_id = 10)
     (10, 'FS001-BROWN-42', 'Brown', '42', 25),
     (10, 'FS001-BLACK-41', 'Black', '41', 25);
 
@@ -237,8 +237,8 @@ VALUES
 INSERT INTO product_images (product_id, image_url)
 VALUES
     (2, 'https://cdn.vuahanghieu.com/unsafe/0x0/left/top/smart/filters:quality(90)/https://admin.vuahanghieu.com/upload/news/content/2023/09/ao-phong-burberry-logo-print-cotton-t-shirt-mau-trang-jpg-1694661542-14092023101902.jpg'),
-(2, 'https://blankroom.co/cdn/shop/files/gucci-original-print-oversize-t-shirt-616036-XJCOQ-1082-a.jpg?v=1730710915&width=1445'),
-(2, 'https://hourscollection.com/cdn/shop/files/CroppedT-shirt-ForestGreen-ProductPhoto.png?v=1739485867');
+    (2, 'https://blankroom.co/cdn/shop/files/gucci-original-print-oversize-t-shirt-616036-XJCOQ-1082-a.jpg?v=1730710915&width=1445'),
+    (2, 'https://hourscollection.com/cdn/shop/files/CroppedT-shirt-ForestGreen-ProductPhoto.png?v=1739485867');
 
 -- Thêm ảnh cho 'White Basic Sneakers' (product_id = 3)
 INSERT INTO product_images (product_id, image_url)
@@ -260,7 +260,7 @@ VALUES
 INSERT INTO product_images (product_id, image_url)
 VALUES
     (6, 'https://i5.walmartimages.com/seo/Boys-Girls-Sneakers-Kids-Shoes-Tennis-Running-Shoes-Athletic-Non-Slip-Sneakers-Navy-Blue-Big-Kid-Size-4_605a3297-de24-4219-a9e3-88405f411fa1.9d3863924edc6ffd434dbc73afcea5c0.jpeg?odnHeight=768&odnWidth=768&odnBg=FFFFFF'),
-(6, 'https://m.media-amazon.com/images/I/71B-AakjjlL.jpg');
+    (6, 'https://m.media-amazon.com/images/I/71B-AakjjlL.jpg');
 
 -- Thêm ảnh cho 'Classic Polo Shirt' (product_id = 7)
 INSERT INTO product_images (product_id, image_url)
@@ -281,3 +281,46 @@ VALUES
 INSERT INTO product_images (product_id, image_url)
 VALUES
     (10, 'https://hitz.co.in/cdn/shop/files/1680-BROWN_604262e9-1998-4507-8ae2-41863abf099f.jpg?v=1755618701');
+
+-- =================================================================
+-- BẢNG PAYMENT_ORDERS, ORDERS, ORDER_ITEMS (ĐỂ TẠO DỮ LIỆU MẪU CHO REVIEW)
+-- =================================================================
+
+-- Tạo 3 payment orders mẫu
+INSERT INTO payment_orders (id, amount, status, payment_method, user_id)
+VALUES
+    (1, 56.40, 'COMPLETED', 'VNPAY', 4), -- Cho user 'huyhoang' (ID 4)
+    (2, 46.50, 'COMPLETED', 'VNPAY', 1), -- Cho user 'bangtran' (ID 1)
+    (3, 31.50, 'PENDING', 'VNPAY', 4);   -- Đơn hàng này user 'huyhoang' chưa thanh toán
+SELECT setval('payment_orders_id_seq', (SELECT MAX(id) FROM payment_orders));
+
+-- Tạo 3 đơn hàng mẫu
+-- INSERT INTO orders (id, order_id, user_id, seller_id, shipping_address_id, total_price, order_status, total_item, payment_status, order_date, deliver_date, payment_order_id)
+-- VALUES
+--     (1, 'SAMPLE-ORDER-001', 4, 3, 4, 56.40, 'DELIVERED', 2, 'COMPLETED', NOW() - INTERVAL '10 day', NOW() - INTERVAL '3 day', 1), -- Đơn đã giao cho huyhoang
+--     (2, 'SAMPLE-ORDER-002', 1, 3, 2, 46.50, 'DELIVERED', 1, 'COMPLETED', NOW() - INTERVAL '8 day', NOW() - INTERVAL '1 day', 2), -- Đơn đã giao cho bangtran
+--     (3, 'SAMPLE-ORDER-003', 4, 3, 4, 31.50, 'PENDING', 1, 'PENDING', NOW() - INTERVAL '1 day', NOW() + INTERVAL '6 day', 3);   -- Đơn đang chờ của huyhoang
+-- SELECT setval('orders_id_seq', (SELECT MAX(id) FROM orders));
+
+-- Tạo các mục hàng cho các đơn hàng trên
+-- INSERT INTO order_items (id, order_id, variant_id, product_title, variant_sku, color, size, quantity, price_at_purchase, selling_price_at_purchase, is_reviewed)
+-- VALUES
+--     -- Các mục cho Đơn 1 (huyhoang, đã giao)
+--     (1, 1, 1, 'Men Skinny Jeans', 'JE001-BLUE-30', 'Blue', '30', 1, 45.00, 36.90, TRUE), -- Đã review
+--     (2, 1, 4, 'Oversized Graphic T-Shirt', 'TS001-WHITE-M', 'White', 'M', 1, 25.00, 19.50, TRUE), -- Đã review
+--     -- Các mục cho Đơn 2 (bangtran, đã giao)
+--     (3, 2, 10, 'Men Kaki Jacket', 'JK001-OLIVE-L', 'Olive', 'L', 1, 55.00, 46.50, FALSE), -- Chưa review
+--     -- Các mục cho Đơn 3 (huyhoang, đang chờ)
+--     (4, 3, 14, 'Classic Polo Shirt', 'PO001-WHITE-M', 'White', 'M', 1, 38.00, 31.50, FALSE); -- Chưa giao, chưa review
+-- SELECT setval('order_items_id_seq', (SELECT MAX(id) FROM order_items));
+
+
+-- =================================================================
+-- BẢNG REVIEWS (ĐÃ SỬA LẠI THEO SCHEMA MỚI)
+-- =================================================================
+-- INSERT INTO reviews (review_text, rating, order_item_id, user_id, created_at, updated_at)
+-- VALUES
+--     ('Chất jean co giãn tốt, mặc rất thoải mái. Form quần ôm vừa vặn, đúng size.', 5.0, 1, 4, NOW() - INTERVAL '2 day', NOW() - INTERVAL '2 day'), -- Review cho order_item 1 (của user 4)
+--     ('Áo phông đẹp, vải mát, tuy nhiên form hơi rộng so với mình.', 4.0, 2, 4, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'); -- Review cho order_item 2 (của user 4)
+--
+-- -- (Không thêm review cho order_item 3 và 4 vì 3 là của user khác, 4 chưa được giao)

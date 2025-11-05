@@ -36,26 +36,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
 
-
-    private static final List<String> PUBLIC_ENDPOINT = List.of(
-            "/auth/**",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "/verify/**",
-            "/api/webhooks/**",
-            "/api/payments/vnpay-callback",
-            "/api/home",
-            "/hello"
-    );
-
-
-    private static final List<String> PUBLIC_GET_ENDPOINTS = List.of(
-            "/api/products",
-            "/api/products/**",
-            "/api/categories",
-            "/api/categories/**"
-    );
+//
+//    private static final List<String> PUBLIC_ENDPOINT = List.of(
+//            "/auth/**",
+//            "/v3/api-docs/**",
+//            "/swagger-ui/**",
+//            "/swagger-ui.html",
+//            "/verify/**",
+//            "/api/webhooks/**",
+//            "/api/payments/vnpay-callback",
+//            "/api/home",
+//            "/hello"
+//    );
+//
+//
+//    private static final List<String> PUBLIC_GET_ENDPOINTS = List.of(
+//            "/api/products",
+//            "/api/products/**",
+//            "/api/categories",
+//            "/api/categories/**"
+//    );
 
     public JwtAuthenticationFilter(HandlerExceptionResolver handlerExceptionResolver, JwtService jwtService, UserDetailsService userDetailsService) {
         this.handlerExceptionResolver = handlerExceptionResolver;
@@ -63,32 +63,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
-
-    @Override
-    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
-        String requestURI = request.getRequestURI();
-
-
-        boolean isPublicEndpoint = PUBLIC_ENDPOINT.stream()
-                .anyMatch(path -> antPathMatcher.match(path, requestURI));
-
-        if (isPublicEndpoint) {
-            return true;
-        }
-
-
-        if (request.getMethod().equalsIgnoreCase(HttpMethod.GET.name())) {
-
-            boolean isPublicGet = PUBLIC_GET_ENDPOINTS.stream()
-                    .anyMatch(path -> antPathMatcher.match(path, requestURI));
-            if (isPublicGet) {
-                return true;
-            }
-        }
-
-
-        return false;
-    }
+//
+//    @Override
+//    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
+//        String requestURI = request.getRequestURI();
+//
+//
+//        boolean isPublicEndpoint = PUBLIC_ENDPOINT.stream()
+//                .anyMatch(path -> antPathMatcher.match(path, requestURI));
+//
+//        if (isPublicEndpoint) {
+//            return true;
+//        }
+//
+//
+//        if (request.getMethod().equalsIgnoreCase(HttpMethod.GET.name())) {
+//
+//            boolean isPublicGet = PUBLIC_GET_ENDPOINTS.stream()
+//                    .anyMatch(path -> antPathMatcher.match(path, requestURI));
+//            if (isPublicGet) {
+//                return true;
+//            }
+//        }
+//
+//
+//        return false;
+//    }
 
 
     @Override

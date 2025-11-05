@@ -13,6 +13,7 @@ import com.bangvan.entity.User;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
+import com.bangvan.repository.AddressRepository; // <-- IMPORT MỚI
 import com.bangvan.repository.RoleRepository;
 import com.bangvan.repository.SellerRepository;
 import com.bangvan.repository.UserRepository;
@@ -38,6 +39,7 @@ public class SellerServiceImpl implements SellerService {
     private final SellerRepository sellerRepository;
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
+    private final AddressRepository addressRepository; // <-- TIÊM REPOSITORY MỚI
 
 
     private SellerResponse mapSellerToSellerResponse(Seller seller) {
@@ -74,14 +76,28 @@ public class SellerServiceImpl implements SellerService {
         seller.setBankDetails(request.getBankDetails());
         seller.setGstin(request.getGstin());
 
+        // --- START FIX ---
+        // 1. Lấy đối tượng Address (transient/detached) từ request
         Address pickupAddress = request.getPickupAddress();
+
+        // 2. Gán User (managed) cho Address
         pickupAddress.setUser(user);
-        seller.setPickupAddress(pickupAddress);
+
+        // 3. Chủ động lưu (persist hoặc merge) Address trước tiên.
+        //    Thao tác này biến pickupAddress thành một managed entity.
+        Address managedPickupAddress = addressRepository.save(pickupAddress);
+
+        // 4. Gán managed Address cho Seller
+        seller.setPickupAddress(managedPickupAddress);
+        // --- END FIX ---
+
 
         Role sellerRole = roleRepository.findByName("ROLE_SELLER").orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
         user.getRoles().add(sellerRole);
-        userRepository.save(user);
+        userRepository.save(user); // Lưu User (để cập nhật role)
 
+        // Lưu Seller. Giờ đây pickupAddress đã là managed entity,
+        // nên việc gán vào Seller (không còn cascade persist) là an toàn.
         seller = sellerRepository.save(seller);
 
 
@@ -94,9 +110,19 @@ public class SellerServiceImpl implements SellerService {
     public SellerResponse updateSeller(UpdateSellerRequest request, Principal principal){
         String username = principal.getName();
         Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
+
+        // --- CẬP NHẬT LOGIC UPDATE ĐỊA CHỈ (TƯƠNG TỰ NHƯ KHI TẠO MỚI) ---
+        // Lấy địa chỉ từ request
+        Address pickupAddress = request.getPickupAddress();
+        // Đảm bảo user được gán (quan trọng nếu đây là địa chỉ mới)
+        pickupAddress.setUser(seller.getUser());
+        // Lưu/Merge địa chỉ trước
+        Address managedPickupAddress = addressRepository.save(pickupAddress);
+
         seller.setBusinessDetails(request.getBusinessDetails());
         seller.setBankDetails(request.getBankDetails());
-        seller.setPickupAddress(request.getPickupAddress());
+        // Gán địa chỉ đã được managed
+        seller.setPickupAddress(managedPickupAddress);
         seller.setGstin(request.getGstin());
         sellerRepository.save(seller);
 
@@ -109,6 +135,10 @@ public class SellerServiceImpl implements SellerService {
     public String deleteSeller(Principal principal){
         String username = principal.getName();
         Seller seller = sellerRepository.findByUser_UsernameAndUser_EnabledIsTrue(username).orElseThrow(() -> new ResourceNotFoundException("seller", "sellerId", username));
+
+        // Cân nhắc: Xử lý logic dọn dẹp (vd: xóa địa chỉ pickupAddress nếu nó không được dùng ở đâu khác?)
+        // Tạm thời chỉ xóa seller
+
         sellerRepository.delete(seller);
         return "Delete seller successfully";
     }

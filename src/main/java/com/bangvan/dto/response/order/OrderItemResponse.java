@@ -13,12 +13,13 @@ public class OrderItemResponse {
     private Long id;
     private Product product;
     private ProductVariant variant;
-    String productTitle;
-    String variantSku;
-    String color;
-    String size;
-    String imageUrl;
-    Integer quantity;
-    BigDecimal priceAtPurchase;
-    BigDecimal sellingPriceAtPurchase;
+    private String productTitle;
+    private String variantSku;
+    private String color;
+    private String size;
+    private String imageUrl;
+    private Integer quantity;
+    private BigDecimal priceAtPurchase;
+    private BigDecimal sellingPriceAtPurchase;
+    private Boolean isReviewed;
 }

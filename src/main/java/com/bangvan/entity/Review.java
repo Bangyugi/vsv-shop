@@ -30,9 +30,9 @@ public class Review extends AbstractEntity {
     List<String> productImages;
 
     @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "product_id", nullable = false)
-    Product product;
+    @OneToOne
+    @JoinColumn(name = "order_item_id", nullable = false, unique = true)
+    OrderItem orderItem;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

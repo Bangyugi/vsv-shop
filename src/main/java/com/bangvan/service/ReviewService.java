@@ -12,7 +12,7 @@ import java.security.Principal;
 public interface ReviewService {
 
     @Transactional
-    ReviewResponse createReview(Long productId, ReviewRequest request, Principal principal);
+    ReviewResponse createReview(Long orderItemId, ReviewRequest request, Principal principal);
 
     @Transactional
     ReviewResponse updateReview(Long reviewId, ReviewRequest request, Principal principal);
