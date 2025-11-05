@@ -29,4 +29,5 @@ public class ProductResponse {
     private Set<ProductVariant> variants = new HashSet<>();
     private Double averageRating;
     private Integer totalQuantity;
+    private Integer totalSold;
 }

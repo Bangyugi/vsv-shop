@@ -3,6 +3,7 @@ package com.bangvan.controller;
 import com.bangvan.dto.request.seller.BecomeSellerRequest;
 import com.bangvan.dto.request.seller.UpdateSellerRequest;
 import com.bangvan.dto.response.ApiResponse;
+import com.bangvan.service.ProductService;
 import com.bangvan.service.SellerService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ import java.security.Principal;
 public class SellerController {
 
     private final SellerService sellerService;
+    private final ProductService productService;
 
     @Operation(summary = "Become Seller", description = "Become Seller API")
     @PostMapping("/become-seller")

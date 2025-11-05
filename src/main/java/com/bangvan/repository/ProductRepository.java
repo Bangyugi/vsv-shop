@@ -1,6 +1,7 @@
 package com.bangvan.repository;
 
 import com.bangvan.entity.Product;
+import com.bangvan.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,4 +21,5 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Page<Product> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
 
     Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+
 }

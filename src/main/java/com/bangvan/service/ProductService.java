@@ -42,7 +42,11 @@ public interface ProductService {
 
     PageCustomResponse<ProductResponse> findProductBySeller(Long sellerId, Pageable pageable);
 
+    // THÊM PHƯƠNG THỨC NÀY
+    PageCustomResponse<ProductResponse> getMyProducts(Principal principal, Pageable pageable);
+
     PageCustomResponse<ProductResponse> searchProduct(String keyword, Pageable pageable);
 
     PageCustomResponse<ProductResponse> findProductByCategory(Long categoryId, Pageable pageable);
+
 }

@@ -33,21 +33,5 @@ public class CustomerController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @GetMapping("/products/{productId}/reviews")
-    @Operation(summary = "Get Reviews by Product ID", description = "Public endpoint to get a paginated list of reviews for a specific product.")
-    public ResponseEntity<ApiResponse> getReviewsByProductId(
-            @PathVariable Long productId,
-            @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
-            @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
-            @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
-            @RequestParam(value = "sortDir", defaultValue = "DESC", required = false) String sortDir
-    ) {
-        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
-        ApiResponse apiResponse = ApiResponse.success(
-                HttpStatus.OK.value(),
-                "Reviews fetched successfully",
-                reviewService.getReviewsByProductId(productId, pageable)
-        );
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
+
 }

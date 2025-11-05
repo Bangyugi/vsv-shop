@@ -1,5 +1,6 @@
 package com.bangvan.dto.response.review;
 
+import com.bangvan.dto.response.order.OrderItemResponse;
 import com.bangvan.dto.response.user.UserResponse;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,4 +19,5 @@ public class ReviewResponse {
     private UserResponse user;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private OrderItemResponse orderItem;
 }

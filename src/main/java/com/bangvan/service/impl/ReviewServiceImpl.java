@@ -3,15 +3,18 @@ package com.bangvan.service.impl;
 import com.bangvan.dto.request.review.ReviewRequest;
 import com.bangvan.dto.response.PageCustomResponse;
 
+import com.bangvan.dto.response.order.OrderItemResponse;
 import com.bangvan.dto.response.review.ReviewResponse;
 import com.bangvan.dto.response.user.UserResponse;
 
+import com.bangvan.entity.OrderItem;
 import com.bangvan.entity.Product;
 import com.bangvan.entity.Review;
 import com.bangvan.entity.User;
 import com.bangvan.exception.AppException;
 import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
+import com.bangvan.repository.OrderItemRepository;
 import com.bangvan.repository.OrderRepository;
 import com.bangvan.repository.ProductRepository;
 import com.bangvan.repository.ReviewRepository;
@@ -39,33 +42,44 @@ public class ReviewServiceImpl implements ReviewService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final ModelMapper modelMapper;
+    private final OrderItemRepository orderItemRepository;
 
     @Transactional
     @Override
-    public ReviewResponse createReview(Long productId, ReviewRequest request, Principal principal) {
+    public ReviewResponse createReview(Long orderItemId, ReviewRequest request, Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", principal.getName()));
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", "ID", productId));
 
-        boolean hasPurchased = orderRepository.findByUserAndOrderStatus(user, OrderStatus.DELIVERED, Pageable.unpaged())
-                .getContent().stream()
-                .anyMatch(order -> order.getOrderItems().stream()
-                        .anyMatch(item -> item.getProductTitle().equals(product.getTitle())));
 
-        if (!hasPurchased) {
-            throw new AppException(ErrorCode.ACCESS_DENIED, "You can only review products you have purchased.");
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("OrderItem", "ID", orderItemId));
+
+
+        if (!orderItem.getOrder().getUser().getId().equals(user.getId())) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "You can only review items from your own orders.");
         }
 
-        reviewRepository.findByUserIdAndProductId(user.getId(), productId).ifPresent(review -> {
-            throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "You have already reviewed this product.");
-        });
+
+        if (orderItem.getOrder().getOrderStatus() != OrderStatus.DELIVERED) {
+            throw new AppException(ErrorCode.ACCESS_DENIED, "You can only review products after the order is delivered.");
+        }
+
+
+        if (orderItem.getIsReviewed() || reviewRepository.existsByOrderItemId(orderItemId)) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "You have already reviewed this order item.");
+        }
+
 
         Review review = modelMapper.map(request, Review.class);
         review.setUser(user);
-        review.setProduct(product);
+        review.setOrderItem(orderItem);
 
         Review savedReview = reviewRepository.save(review);
+
+
+        orderItem.setIsReviewed(true);
+        orderItemRepository.save(orderItem);
+
         return mapReviewToResponse(savedReview);
     }
 
@@ -102,11 +116,22 @@ public class ReviewServiceImpl implements ReviewService {
             throw new AppException(ErrorCode.ACCESS_DENIED, "You can only delete your own reviews or you must be an admin.");
         }
 
+
+        OrderItem orderItem = review.getOrderItem();
+        if (orderItem != null) {
+            orderItem.setIsReviewed(false);
+            orderItemRepository.save(orderItem);
+        }
+
         reviewRepository.delete(review);
     }
 
     @Override
     public PageCustomResponse<ReviewResponse> getReviewsByProductId(Long productId, Pageable pageable) {
+
+        productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "ID", productId));
+
         Page<Review> reviewPage = reviewRepository.findByProductId(productId, pageable);
         List<ReviewResponse> reviewResponses = reviewPage.getContent().stream()
                 .map(this::mapReviewToResponse)
@@ -124,6 +149,19 @@ public class ReviewServiceImpl implements ReviewService {
     private ReviewResponse mapReviewToResponse(Review review) {
         ReviewResponse response = modelMapper.map(review, ReviewResponse.class);
         response.setUser(modelMapper.map(review.getUser(), UserResponse.class));
+
+
+        if (review.getOrderItem() != null) {
+            OrderItem orderItem = review.getOrderItem();
+            OrderItemResponse orderItemResponse = modelMapper.map(orderItem, OrderItemResponse.class);
+
+
+            if (orderItem.getVariant() != null) {
+                orderItemResponse.setProduct(orderItem.getVariant().getProduct());
+            }
+            response.setOrderItem(orderItemResponse);
+        }
+
         return response;
     }
 }

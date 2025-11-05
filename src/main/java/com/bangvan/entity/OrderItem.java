@@ -37,4 +37,7 @@ public class OrderItem {
     BigDecimal priceAtPurchase;
     BigDecimal sellingPriceAtPurchase;
 
+    @Column(name = "is_reviewed", nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    Boolean isReviewed = false;
+
 }

@@ -28,7 +28,7 @@ public class Seller extends AbstractEntity{
     @Embedded
     BankDetails bankDetails = new BankDetails();
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne
     Address pickupAddress ;
 
     String gstin;

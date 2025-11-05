@@ -11,6 +11,7 @@ import com.bangvan.exception.ResourceNotFoundException;
 import com.bangvan.repository.*;
 import com.bangvan.service.CartService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,14 +28,16 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j 
 public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
-    private final ProductVariantRepository productVariantRepository; // Sử dụng repository mới
+    private final ProductVariantRepository productVariantRepository;
     private final CartItemRepository cartItemRepository;
     private final CouponRepository couponRepository;
+    private final SellerRepository sellerRepository; 
 
     private CartResponse mapCartToCartResponse(Cart cart) {
         CartResponse cartResponse = modelMapper.map(cart, CartResponse.class);
@@ -64,6 +67,15 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", "ID", request.getVariantId()));
 
         Product product = variant.getProduct();
+
+        
+        
+        Optional<Seller> sellerOpt = sellerRepository.findById(user.getId());
+        if (sellerOpt.isPresent() && sellerOpt.get().getId().equals(product.getSeller().getId())) {
+            log.warn("Seller (User ID: {}) attempted to add their own product (Product ID: {}) to cart.", user.getId(), product.getId());
+            throw new AppException(ErrorCode.ACCESS_DENIED, "Sellers cannot add their own products to the cart.");
+        }
+        
 
         Optional<CartItem> existingCartItemOpt = cartItemRepository.findByCartAndVariant(cart, variant);
 
@@ -98,31 +110,31 @@ public class CartServiceImpl implements CartService {
         return mapCartToCartResponse(cart);
     }
 
-    // --- START MODIFICATION: Cập nhật updateCartTotals ---
+    
     private void updateCartTotals(Cart cart) {
-        BigDecimal subTotalPrice = BigDecimal.ZERO; // Giá bán (Selling Price)
-        BigDecimal originalTotalPrice = BigDecimal.ZERO; // Giá gốc (Original Price)
+        BigDecimal subTotalPrice = BigDecimal.ZERO; 
+        BigDecimal originalTotalPrice = BigDecimal.ZERO; 
         int totalItem = 0;
 
         for (CartItem cartItem : cart.getCartItems()) {
             Product product = cartItem.getVariant().getProduct();
             BigDecimal itemSellingPrice = product.getSellingPrice();
-            BigDecimal itemOriginalPrice = product.getPrice(); // Lấy giá gốc
+            BigDecimal itemOriginalPrice = product.getPrice(); 
             int quantity = cartItem.getQuantity();
 
-            cartItem.setPrice(itemOriginalPrice.multiply(BigDecimal.valueOf(quantity))); // Cập nhật tổng giá gốc của item
-            cartItem.setSellingPrice(itemSellingPrice.multiply(BigDecimal.valueOf(quantity))); // Cập nhật tổng giá bán của item
+            cartItem.setPrice(itemOriginalPrice.multiply(BigDecimal.valueOf(quantity))); 
+            cartItem.setSellingPrice(itemSellingPrice.multiply(BigDecimal.valueOf(quantity))); 
             cartItemRepository.save(cartItem);
 
             subTotalPrice = subTotalPrice.add(cartItem.getSellingPrice());
-            originalTotalPrice = originalTotalPrice.add(cartItem.getPrice()); // Cộng tổng giá gốc
+            originalTotalPrice = originalTotalPrice.add(cartItem.getPrice()); 
             totalItem += quantity;
         }
 
         cart.setTotalItem(totalItem);
-        cart.setTotalPrice(originalTotalPrice); // <-- SET TỔNG GIÁ GỐC
+        cart.setTotalPrice(originalTotalPrice); 
 
-        // Xử lý logic coupon (tính giảm giá dựa trên subTotalPrice)
+        
         if (cart.getCouponCode() != null && !cart.getCouponCode().isEmpty()) {
             Optional<Coupon> couponOpt = couponRepository.findByCode(cart.getCouponCode());
             if (couponOpt.isPresent()) {
@@ -133,31 +145,31 @@ public class CartServiceImpl implements CartService {
                     BigDecimal discountAmount = subTotalPrice.multiply(coupon.getDiscountPercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
                     BigDecimal finalPrice = subTotalPrice.subtract(discountAmount);
 
-                    cart.setTotalSellingPrice(finalPrice); // Giá cuối cùng (đã giảm)
+                    cart.setTotalSellingPrice(finalPrice); 
                     cart.setDiscount(coupon.getDiscountPercentage());
                 } else {
-                    // Coupon không hợp lệ, reset
+                    
                     cart.setCouponCode(null);
                     cart.setDiscount(null);
-                    cart.setTotalSellingPrice(subTotalPrice); // Giá cuối cùng = giá bán (chưa giảm)
+                    cart.setTotalSellingPrice(subTotalPrice); 
                 }
             } else {
-                // Coupon không tìm thấy, reset
+                
                 cart.setCouponCode(null);
                 cart.setDiscount(null);
                 cart.setTotalSellingPrice(subTotalPrice);
             }
         } else {
-            // Không có coupon
-            cart.setTotalSellingPrice(subTotalPrice); // Giá cuối cùng = giá bán (chưa giảm)
-            cart.setDiscount(calculateDiscountPercentage(originalTotalPrice, subTotalPrice)); // Tính discount mặc định (nếu có)
+            
+            cart.setTotalSellingPrice(subTotalPrice); 
+            cart.setDiscount(calculateDiscountPercentage(originalTotalPrice, subTotalPrice)); 
         }
 
         cartRepository.save(cart);
     }
-    // --- END MODIFICATION ---
+    
 
-    // Hàm này tính toán % giảm giá chung dựa trên tổng giá gốc và tổng giá bán
+    
     private BigDecimal calculateDiscountPercentage(BigDecimal totalPrice, BigDecimal totalSellingPrice) {
         if (totalPrice == null || totalSellingPrice == null ||
                 totalPrice.compareTo(BigDecimal.ZERO) <= 0 ||
@@ -192,7 +204,7 @@ public class CartServiceImpl implements CartService {
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "user", principal.getName()));
 
-        // Tính subTotal (tổng giá bán) trước khi áp coupon
+        
         BigDecimal subTotalPrice = cart.getCartItems().stream()
                 .map(item -> item.getVariant().getProduct().getSellingPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -210,7 +222,7 @@ public class CartServiceImpl implements CartService {
         }
 
         cart.setCouponCode(coupon.getCode());
-        updateCartTotals(cart); // Gọi updateCartTotals để tính toán lại giá
+        updateCartTotals(cart); 
 
         coupon.getUsedByUser().add(user);
         couponRepository.save(coupon);

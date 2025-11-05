@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,17 +25,17 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
-    @PostMapping("/{productId}")
+    @PostMapping("/order-item/{orderItemId}")
     @PreAuthorize("hasRole('USER')")
-    @Operation(summary = "Create a new review", description = "Endpoint for authenticated users to add a review to a product they have purchased.")
+    @Operation(summary = "Create a new review for an order item", description = "Endpoint for authenticated users to add a review to an order item they have purchased and received.")
     public ResponseEntity<ApiResponse> createReview(
-            @PathVariable Long productId,
+            @PathVariable Long orderItemId,
             @Valid @RequestBody ReviewRequest request,
             Principal principal) {
         ApiResponse apiResponse = ApiResponse.success(
                 HttpStatus.CREATED.value(),
                 "Review created successfully",
-                reviewService.createReview(productId, request, principal)
+                reviewService.createReview(orderItemId, request, principal)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
@@ -61,6 +64,23 @@ public class ReviewController {
                 HttpStatus.OK.value(),
                 "Review deleted successfully",
                 null
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+    @GetMapping("/products/{productId}")
+    @Operation(summary = "Get Reviews by Product ID", description = "Public endpoint to get a paginated list of reviews for a specific product.")
+    public ResponseEntity<ApiResponse> getReviewsByProductId(
+            @PathVariable Long productId,
+            @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = "DESC", required = false) String sortDir
+    ) {
+        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Reviews fetched successfully",
+                reviewService.getReviewsByProductId(productId, pageable)
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }

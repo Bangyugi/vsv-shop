@@ -4,6 +4,8 @@ import com.bangvan.dto.request.product.CreateProductRequest;
 import com.bangvan.dto.request.product.UpdateProductRequest;
 import com.bangvan.dto.request.product.UpdateStockRequest;
 import com.bangvan.dto.response.ApiResponse;
+import com.bangvan.dto.response.PageCustomResponse;
+import com.bangvan.dto.response.product.ProductResponse;
 import com.bangvan.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -15,9 +17,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.nio.file.attribute.UserPrincipal;
 import java.security.Principal;
 
 @RestController
@@ -59,14 +63,14 @@ public class ProductController {
             @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
             @RequestParam(value = "color", required = false) String color,
             @RequestParam(value = "size", required = false) String size,
-            @RequestParam(value = "minRating", required = false) Double minRating, // Thêm tham số rating
+            @RequestParam(value = "minRating", required = false) Double minRating,
             @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
             @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
-            @RequestParam(value = "sortDir", defaultValue = "DESC", required = false) String sortDir // Mặc định DESC cho mới nhất
+            @RequestParam(value = "sortDir", defaultValue = "DESC", required = false) String sortDir
     ) {
-        // Validate sortBy field if necessary
-        String validSortBy = productService.validateSortByField(sortBy); // Thêm validation sort field nếu cần
+
+        String validSortBy = productService.validateSortByField(sortBy);
 
         Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), validSortBy));
         ApiResponse apiResponse = ApiResponse.success(
@@ -122,6 +126,28 @@ public class ProductController {
     }
 
 
+
+    @GetMapping("/my-products")
+    @PreAuthorize("hasRole('SELLER')")
+    @Operation(summary = "Get current seller's products", description = "Endpoint for the logged-in seller to retrieve their own products with pagination.")
+    public ResponseEntity<ApiResponse> getMyProducts(
+            Principal principal,
+            @RequestParam(value = "pageNo", defaultValue = "1", required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "10", required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt", required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = "DESC", required = false) String sortDir
+    ) {
+        String validSortBy = productService.validateSortByField(sortBy);
+        Pageable pageable = PageRequest.of(pageNo - 1, pageSize, Sort.by(Sort.Direction.fromString(sortDir), validSortBy));
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Seller products fetched successfully",
+                productService.getMyProducts(principal, pageable)
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+
     @GetMapping("/seller/{sellerId}")
     @Operation(summary = "Get products by seller ID", description = "Endpoint to fetch products by seller ID")
     public ResponseEntity<ApiResponse> getProductsBySeller(
@@ -157,4 +183,5 @@ public class ProductController {
         );
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
+
 }
