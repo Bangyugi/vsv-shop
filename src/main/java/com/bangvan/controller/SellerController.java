@@ -3,6 +3,7 @@ package com.bangvan.controller;
 import com.bangvan.dto.request.seller.BecomeSellerRequest;
 import com.bangvan.dto.request.seller.UpdateSellerRequest;
 import com.bangvan.dto.response.ApiResponse;
+import com.bangvan.service.NotificationService; 
 import com.bangvan.service.ProductService;
 import com.bangvan.service.SellerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; 
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -26,6 +28,7 @@ public class SellerController {
 
     private final SellerService sellerService;
     private final ProductService productService;
+    private final NotificationService notificationService; 
 
     @Operation(summary = "Become Seller", description = "Become Seller API")
     @PostMapping("/become-seller")
@@ -41,6 +44,20 @@ public class SellerController {
         ApiResponse apiResponse = ApiResponse.success(200, "Get seller profile successfully", sellerService.getProfile(principal));
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
+
+    
+    @Operation(summary = "Get Notification Summary", description = "Get summary of notifications (unread and total) for the current seller")
+    @GetMapping("/notifications/summary")
+    @PreAuthorize("hasRole('SELLER')") 
+    public ResponseEntity<ApiResponse> getNotificationSummary(Principal principal) {
+        ApiResponse apiResponse = ApiResponse.success(
+                HttpStatus.OK.value(),
+                "Notification summary fetched successfully",
+                notificationService.getNotificationSummary(principal)
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+    
 
     @Operation(summary = "Get List Seller", description = "Get List Seller API")
     @GetMapping
@@ -69,6 +86,4 @@ public class SellerController {
         ApiResponse apiResponse = ApiResponse.success(200, "Delete seller successfully", sellerService.deleteSeller(principal));
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
-
-
 }

@@ -1,9 +1,13 @@
 package com.bangvan.entity;
 
 import com.bangvan.utils.AccountStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "sellers")
@@ -37,5 +41,10 @@ public class Seller extends AbstractEntity{
 
     @Enumerated(EnumType.STRING)
     AccountStatus accountStatus = AccountStatus.PENDING_VERIFICATION;
+
+
+    @OneToMany(mappedBy = "seller", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+            Set<Notification> notifications = new HashSet<>();
 
 }
