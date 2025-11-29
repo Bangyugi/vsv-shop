@@ -30,4 +30,9 @@ public class Category {
     @NotNull
     private Integer level;
 
+    @Column(name = "image_url")
+    String image;
+
+    @Column(name = "is_active")
+    Boolean isActive = true;
 }

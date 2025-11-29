@@ -10,4 +10,6 @@ public class CategoryResponse {
     private String name;
     private CategoryResponse parentCategory;
     private Integer level;
+    private String image;
+    private Boolean isActive;
 }

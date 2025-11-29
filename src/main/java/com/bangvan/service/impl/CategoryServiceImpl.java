@@ -12,6 +12,8 @@ import com.bangvan.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Transactional
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse createCategory(CategoryRequest request) {
         Category category = new Category();
         category.setName(request.getName());
@@ -51,6 +54,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(value = "categories", key = "'all'")
     public List<CategoryResponse> getAllCategories() {
         List<Category> categories = categoryRepository.findAll();
         return categories.stream()
@@ -60,6 +64,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Transactional
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public CategoryResponse updateCategory(Long categoryId, CategoryRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
@@ -80,6 +85,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Transactional
     @Override
+    @CacheEvict(value = "categories", allEntries = true)
     public String deleteCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
@@ -102,6 +108,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Cacheable(value = "categories", key = "'level3_parent_' + #parentCategoryId")
     public List<CategoryResponse> findAllLevel3Subcategories(Long parentCategoryId) {
         log.info("Finding all level 3 subcategories for parent category ID: {}", parentCategoryId);
 

@@ -26,7 +26,7 @@ public class AdminController {
 
     private final UserService userService;
     private final SellerService sellerService;
-    private final HomeCategoryService homeCategoryService;
+
     private final OrderService orderService;
     private final CategoryService categoryService;
 
@@ -120,61 +120,6 @@ public class AdminController {
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
-    @PostMapping("/home-categories")
-    @Operation(summary = "Create a new Home Category", description = "Endpoint for admins to add a new category to the homepage layout.")
-    public ResponseEntity<ApiResponse> createHomeCategory(@Valid @RequestBody CategoryRequest request) {
-        ApiResponse apiResponse = ApiResponse.success(
-                HttpStatus.CREATED.value(),
-                "Home category created successfully",
-                homeCategoryService.createHomeCategory(request)
-        );
-        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
-    }
-
-    @GetMapping("/home-categories")
-    @Operation(summary = "Get all Home Categories", description = "Endpoint for admins to retrieve all homepage categories.")
-    public ResponseEntity<ApiResponse> getAllHomeCategories() {
-        ApiResponse apiResponse = ApiResponse.success(
-                HttpStatus.OK.value(),
-                "Home categories fetched successfully",
-                homeCategoryService.getAllHomeCategories()
-        );
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
-
-    @GetMapping("/home-categories/{id}")
-    @Operation(summary = "Get Home Category by ID", description = "Endpoint to get a specific homepage category by its ID.")
-    public ResponseEntity<ApiResponse> getHomeCategoryById(@PathVariable Long id) {
-        ApiResponse apiResponse = ApiResponse.success(
-                HttpStatus.OK.value(),
-                "Home category found successfully",
-                homeCategoryService.getHomeCategoryById(id)
-        );
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
-
-    @PutMapping("/home-categories/{id}")
-    @Operation(summary = "Update a Home Category", description = "Endpoint for admins to update an existing homepage category.")
-    public ResponseEntity<ApiResponse> updateHomeCategory(@PathVariable Long id, @Valid @RequestBody CategoryRequest request) {
-        ApiResponse apiResponse = ApiResponse.success(
-                HttpStatus.OK.value(),
-                "Home category updated successfully",
-                homeCategoryService.updateHomeCategory(id, request)
-        );
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
-
-    @DeleteMapping("/home-categories/{id}")
-    @Operation(summary = "Delete a Home Category", description = "Endpoint for admins to delete a homepage category.")
-    public ResponseEntity<ApiResponse> deleteHomeCategory(@PathVariable Long id) {
-        homeCategoryService.deleteHomeCategory(id);
-        ApiResponse apiResponse = ApiResponse.success(
-                HttpStatus.OK.value(),
-                "Home category with ID " + id + " has been deleted successfully",
-                null
-        );
-        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-    }
 
 
 }

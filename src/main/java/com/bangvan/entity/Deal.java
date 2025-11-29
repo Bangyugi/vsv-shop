@@ -20,7 +20,7 @@ public class Deal {
     private Integer discount;
 
     @OneToOne
-    @JoinColumn(name = "home_category_id")
-    private HomeCategory category;
+    @JoinColumn(name = "category_id")
+    private Category category;
 
 }
