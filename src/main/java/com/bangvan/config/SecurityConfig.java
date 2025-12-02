@@ -52,7 +52,8 @@ public class SecurityConfig {
             "/api/webhooks/**",
             "/api/payments/vnpay-callback",
             "/api/home",
-            "/hello"
+            "/hello",
+            "/api/uploads/**"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = new String[]{

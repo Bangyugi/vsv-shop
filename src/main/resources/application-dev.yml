@@ -27,7 +27,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: bangtranvan08@gmail.com
-    password: iduxkbxshjdojtjr
+    password: csifbkuvrfiggsnc
     properties:
       mail:
         smtp:
@@ -62,3 +62,7 @@ app:
     password: 5zm7aa8o
   otp:
     expiration-minutes: 15
+cloudinary:
+  cloud-name: dk7qfni9j
+  api-key: 527263955755332
+  api-secret: Js0ENE7lOkCYtU7lEKEyLHl1wo8

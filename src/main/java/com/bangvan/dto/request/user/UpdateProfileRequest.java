@@ -36,6 +36,8 @@ public class UpdateProfileRequest {
     @NotNull(message = "Date of birth can not be null")
     @Past(message = "Date of birth must be in the past")
     private LocalDate birthDate;
+
+    @Builder.Default
     private String avatar = "https://cdn-icons-png.flaticon.com/512/3607/3607444.png";
 
     private Gender gender;
