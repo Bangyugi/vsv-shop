@@ -50,7 +50,7 @@ public class User extends  AbstractEntity implements UserDetails {
 
 
     @Column(name = "avatar")
-    String avatar = "https://cdn-icons-png.flaticon.com/512/3607/3607444.png";
+    String avatar ;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "gender")

@@ -1,5 +1,6 @@
 package com.bangvan.service.impl;
 
+import com.bangvan.document.ProductDocument;
 import com.bangvan.dto.request.product.CreateProductRequest;
 import com.bangvan.dto.request.product.UpdateProductRequest;
 import com.bangvan.dto.request.product.UpdateStockRequest;
@@ -11,6 +12,7 @@ import com.bangvan.exception.ErrorCode;
 import com.bangvan.exception.ResourceNotFoundException;
 import com.bangvan.repository.*;
 import com.bangvan.service.ProductService;
+import com.bangvan.service.ProductSyncService;
 import jakarta.persistence.criteria.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +21,22 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.query.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
+
+import com.bangvan.dto.response.seller.SellerResponse;
+import com.bangvan.dto.response.category.CategoryResponse;
+import com.bangvan.dto.response.user.UserResponse;
+import com.bangvan.entity.BusinessDetails;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -46,6 +60,8 @@ public class ProductServiceImpl implements ProductService {
 
 
     private final ReviewRepository reviewRepository;
+    private final ProductSyncService productSyncService;
+    private final ElasticsearchOperations elasticsearchOperations;
 
 
     @Transactional
@@ -78,6 +94,10 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product savedProduct = productRepository.save(product);
+
+
+        productSyncService.syncProductToElasticsearch(savedProduct);
+
         return mapProductToResponse(savedProduct);
     }
 
@@ -315,6 +335,9 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product updatedProduct = productRepository.save(product);
+
+        productSyncService.syncProductToElasticsearch(updatedProduct);
+
         return mapProductToResponse(updatedProduct);
     }
 
@@ -350,6 +373,9 @@ public class ProductServiceImpl implements ProductService {
         }
 
         productRepository.delete(product);
+
+        productSyncService.deleteProductFromElasticsearch(productId);
+
         return "Product with ID " + productId + " has been deleted successfully.";
     }
 
@@ -411,20 +437,83 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public PageCustomResponse<ProductResponse> searchProduct(String keyword, Pageable pageable) {
-        Page<Product> productPage = productRepository.findByTitleContainingIgnoreCase(keyword, pageable);
-        List<ProductResponse> productResponses = productPage.getContent().stream()
-                .map(this::mapProductToResponseWithRating)
+        log.info("Searching products in Elasticsearch with keyword: {}", keyword);
+        Query query = NativeQuery.builder()
+                .withQuery(q -> q
+                        .multiMatch(m -> m
+                                .fields("title", "description")
+                                .query(keyword)
+                                .fuzziness("AUTO")
+                                .operator(Operator.Or)
+                        )
+                )
+                .withPageable(pageable)
+                .build();
+
+        SearchHits<ProductDocument> searchHits = elasticsearchOperations.search(query, ProductDocument.class);
+
+
+        List<ProductResponse> productResponses = searchHits.stream()
+                .map(SearchHit::getContent)
+                .map(this::mapDocumentToResponse)
                 .collect(Collectors.toList());
 
         return PageCustomResponse.<ProductResponse>builder()
-                .pageNo(productPage.getNumber() + 1)
-                .pageSize(productPage.getSize())
-                .totalPages(productPage.getTotalPages())
-                .totalElements(productPage.getTotalElements())
+                .pageNo(pageable.getPageNumber() + 1)
+                .pageSize(pageable.getPageSize())
+                .totalPages((int) Math.ceil((double) searchHits.getTotalHits() / pageable.getPageSize()))
+                .totalElements(searchHits.getTotalHits())
                 .pageContent(productResponses)
                 .build();
     }
+    private ProductResponse mapDocumentToResponse(ProductDocument doc) {
+        ProductResponse response = new ProductResponse();
 
+
+        response.setId(doc.getId());
+        response.setTitle(doc.getTitle());
+        response.setDescription(doc.getDescription());
+        response.setPrice(doc.getPrice());
+        response.setSellingPrice(doc.getSellingPrice());
+        response.setDiscountPercent(doc.getDiscountPercent());
+
+
+        response.setImages(doc.getImages() != null ? doc.getImages() : new ArrayList<>());
+
+        response.setNumRatings(doc.getNumRatings());
+        response.setAverageRating(doc.getAverageRating());
+
+        response.setTotalSold(doc.getTotalSold());
+
+
+        if (doc.getSellerId() != null) {
+            SellerResponse sellerResp = new SellerResponse();
+
+
+            UserResponse userResp = new UserResponse();
+            userResp.setId(doc.getSellerId());
+            userResp.setAvatar(doc.getSellerAvatar());
+
+            BusinessDetails businessDetails = new BusinessDetails();
+            businessDetails.setBusinessName(doc.getSellerName());
+
+            sellerResp.setUser(userResp);
+            sellerResp.setBusinessDetails(businessDetails);
+
+            response.setSeller(sellerResp);
+        }
+
+        if (doc.getCategoryId() != null) {
+            CategoryResponse catResp = new CategoryResponse();
+            catResp.setId(doc.getCategoryId());
+            catResp.setName(doc.getCategoryName());
+            response.setCategory(catResp);
+        }
+
+        response.setVariants(new HashSet<>());
+
+        return response;
+    }
     @Override
     public PageCustomResponse<ProductResponse> findProductByCategory(Long categoryId, Pageable pageable) {
         categoryRepository.findById(categoryId)

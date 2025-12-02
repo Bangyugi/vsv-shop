@@ -43,4 +43,7 @@ public class RegisterRequest {
 
     private Gender gender;
 
+    @Builder.Default
+    private String avatar =  "https://cdn-icons-png.flaticon.com/512/3607/3607444.png";
+
 }
